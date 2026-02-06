@@ -1,0 +1,10 @@
+<!-- wifi-online.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" role="img" aria-label="Wi-Fi connected">
+  <!-- Use currentColor so the icon inherits CSS color -->
+  <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.88 8.12a15.99 15.99 0 0 1 18.24 0"></path>
+    <path d="M5.64 10.88a11.99 11.99 0 0 1 12.72 0"></path>
+    <path d="M9.36 14.12a5.99 5.99 0 0 1 5.28 0"></path>
+    <circle cx="12" cy="18" r="1.4" fill="currentColor" stroke="none"></circle>
+  </g>
+</svg>
