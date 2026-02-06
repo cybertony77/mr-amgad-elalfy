@@ -7,6 +7,7 @@ import Image from 'next/image';
 import GradeSelect from '../../../../components/GradeSelect';
 import AttendanceWeekSelect from '../../../../components/AttendanceWeekSelect';
 import TimerSelect from '../../../../components/TimerSelect';
+import { useSystemConfig } from '../../../../lib/api/system';
 import { TextInput, ActionIcon, useMantineTheme } from '@mantine/core';
 import { IconSearch, IconArrowRight } from '@tabler/icons-react';
 import HomeworkAnalyticsChart from '../../../../components/HomeworkAnalyticsChart';

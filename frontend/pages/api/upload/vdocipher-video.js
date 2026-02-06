@@ -49,12 +49,8 @@ function loadEnvConfig() {
 const envConfig = loadEnvConfig();
 const VDOCIPHER_API_SECRET = envConfig.VDOCIPHER_API_SECRET || process.env.VDOCIPHER_API_SECRET;
 
-// Log for debugging (remove in production)
-if (!VDOCIPHER_API_SECRET) {
-  console.warn('⚠️ VDOCIPHER_API_SECRET not found in env.config or process.env');
-} else {
-  console.log('✅ VDOCIPHER_API_SECRET loaded (length:', VDOCIPHER_API_SECRET.length + ')');
-}
+// Only log if VDOCIPHER_API_SECRET is actually needed (when API is called)
+// This prevents warning spam on server startup
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -75,6 +71,7 @@ export default async function handler(req, res) {
     }
 
     if (!VDOCIPHER_API_SECRET) {
+      console.warn('⚠️ VDOCIPHER_API_SECRET not found in env.config or process.env');
       console.error('❌ VDOCIPHER_API_SECRET is not configured');
       return res.status(500).json({ error: 'VdoCipher API secret is not configured. Please check your env.config file.' });
     }
