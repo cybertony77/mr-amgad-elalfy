@@ -47,6 +47,7 @@ const JWT_SECRET = envConfig.JWT_SECRET || process.env.JWT_SECRET || 'demo_secre
 const MONGO_URI = envConfig.MONGO_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/demo-attendance-system';
 const DB_NAME = envConfig.DB_NAME || process.env.DB_NAME || 'demo-attendance-system';
 const SYSTEM_SCORING_SYSTEM = envConfig.SYSTEM_SCORING_SYSTEM === 'true' || process.env.SYSTEM_SCORING_SYSTEM === 'true';
+const WITH_PHISICAL_CARD = envConfig.WITH_PHISICAL_CARD === 'true';
 
 console.log('🔗 Final MONGO_URI being used:', MONGO_URI.replace(/:[^:@]*@/, ':****@'));
 console.log('🔗 Final DB_NAME being used:', DB_NAME);
@@ -448,16 +449,43 @@ export default async function handler(req, res) {
       }
     } else if (req.method === 'POST') {
       // Add new student
-      const { name, grade, phone, parents_phone, main_center, age, gender, school, main_comment, comment, account_state, score } = req.body;
-      if (!name || !grade || !phone || !parents_phone || !main_center || age === undefined || !gender || !school) {
-        return res.status(400).json({ error: 'All fields are required' });
+      const { id, name, grade, phone, parents_phone, main_center, age, gender, school, main_comment, comment, account_state, score } = req.body;
+      
+      let newId;
+      
+      if (WITH_PHISICAL_CARD) {
+        // If WITH_PHISICAL_CARD is true, require and validate the custom ID
+        if (!id || !name || !grade || !phone || !parents_phone || !main_center || age === undefined || !gender || !school) {
+          return res.status(400).json({ error: 'All fields are required' });
+        }
+        
+        // Check if the custom ID is already used
+        const existingStudent = await db.collection('students').findOne({ id: parseInt(id) });
+        if (existingStudent) {
+          return res.status(400).json({ error: 'This ID is used, please use another ID' });
+        }
+        
+        newId = parseInt(id);
+      } else {
+        // If WITH_PHISICAL_CARD is false, auto-generate ID (last student ID + 1)
+        if (!name || !grade || !phone || !parents_phone || !main_center || age === undefined || !gender || !school) {
+          return res.status(400).json({ error: 'All fields are required' });
+        }
+        
+        // Find the highest student ID
+        const lastStudent = await db.collection('students')
+          .findOne({}, { sort: { id: -1 }, projection: { id: 1 } });
+        
+        // Generate new ID: last student ID + 1, or 1 if no students exist
+        newId = lastStudent ? lastStudent.id + 1 : 1;
+        
+        // Ensure the generated ID doesn't conflict (in case of gaps)
+        let existingStudent = await db.collection('students').findOne({ id: newId });
+        while (existingStudent) {
+          newId++;
+          existingStudent = await db.collection('students').findOne({ id: newId });
+        }
       }
-      
-      // Auto-generate ID: find the last student ID and add 1
-      const lastStudent = await db.collection('students')
-        .findOne({}, { sort: { id: -1 }, projection: { id: 1 } });
-      
-      const newId = lastStudent ? lastStudent.id + 1 : 1;
       
       // New students start with no weeks; weeks are created on demand
       const weeks = [];
@@ -515,7 +543,7 @@ export default async function handler(req, res) {
         VAC_activated: false
       });
       
-      res.json({ id: newId, vac: vacCode });
+      res.json({ id: newId, newId: newId, vac: vacCode });
     } else {
       res.status(405).json({ error: 'Method not allowed' });
     }

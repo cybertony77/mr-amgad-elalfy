@@ -930,7 +930,7 @@ export default function StudentInfo() {
               {userEmail && (
                 <div className="detail-item">
                   <div className="detail-label">Email</div>
-                  <div className="detail-value" style={{ fontFamily: 'monospace' }}>{userEmail}</div>
+                  <div className="detail-value" style={{ fontFamily: 'monospace', wordWrap: 'break-word', overflowWrap: 'break-word', whiteSpace: 'normal' }}>{userEmail}</div>
                 </div>
               )}
                 <div className="detail-item">

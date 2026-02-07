@@ -354,21 +354,25 @@ export default function ManageOnlineSystem() {
             Delete Student Account
           </button>
 
-          <button
-            className="dashboard-btn"
-            onClick={() => router.push("/dashboard/manage_online_system/preview_student_homeworks")}
-          >
-            <Image src="/books.svg" alt="Preview Homeworks" width={20} height={20} />
-            Preview Student Homeworks
-          </button>
+          {isHomeworksEnabled && (
+            <button
+              className="dashboard-btn"
+              onClick={() => router.push("/dashboard/manage_online_system/preview_student_homeworks")}
+            >
+              <Image src="/books.svg" alt="Preview Homeworks" width={20} height={20} />
+              Preview Student Homeworks
+            </button>
+          )}
 
-          <button
-            className="dashboard-btn"
-            onClick={() => router.push("/dashboard/manage_online_system/preview_student_quizzes")}
-          >
-            <Image src="/notepad.svg" alt="Preview Quizzes" width={20} height={20} />
-            Preview Student Quizzes
-          </button>
+          {isQuizzesEnabled && (
+            <button
+              className="dashboard-btn"
+              onClick={() => router.push("/dashboard/manage_online_system/preview_student_quizzes")}
+            >
+              <Image src="/notepad.svg" alt="Preview Quizzes" width={20} height={20} />
+              Preview Student Quizzes
+            </button>
+          )}
 
         </div>
       </div>

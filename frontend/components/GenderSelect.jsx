@@ -51,13 +51,6 @@ export default function GenderSelect({ selectedGender, onGenderChange, required 
         onClick={actualOnToggle}
       >
         <span>{selectedGender || 'Select Gender'}</span>
-        <span style={{ 
-          color: '#dc3545', 
-          marginLeft: '4px',
-          fontSize: required ? '1rem' : '0'
-        }}>
-          {required ? '*' : ''}
-        </span>
       </div>
       
 

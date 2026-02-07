@@ -16,6 +16,7 @@ import { formatPhoneForDB, validateEgyptPhone, handleEgyptPhoneKeyDown } from '.
 export default function AddStudent() {
   const containerRef = useRef(null);
   const [form, setForm] = useState({
+    id: "",
     name: "",
     age: "",
     gender: "",
@@ -36,6 +37,32 @@ export default function AddStudent() {
   const [copiedVac, setCopiedVac] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null); // 'grade', 'center', 'gender', or null
   const [genderDropdownOpen, setGenderDropdownOpen] = useState(false);
+  const [idError, setIdError] = useState("");
+  const [idChecking, setIdChecking] = useState(false);
+  const [idValid, setIdValid] = useState(false);
+  const [withPhysicalCard, setWithPhysicalCard] = useState(true); // Default to true for backward compatibility
+  const [configLoading, setConfigLoading] = useState(true);
+  
+  // Fetch config on mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch('/api/config');
+        if (response.ok) {
+          const config = await response.json();
+          setWithPhysicalCard(config.WITH_PHISICAL_CARD);
+        }
+      } catch (error) {
+        console.error('Failed to load config:', error);
+        // Default to true if config fails to load
+        setWithPhysicalCard(true);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    fetchConfig();
+  }, []);
+
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(""), 5000);
@@ -80,10 +107,62 @@ export default function AddStudent() {
     };
   }, [openDropdown]);
 
+  // Debounced ID checking (only if WITH_PHISICAL_CARD is true)
+  useEffect(() => {
+    if (!withPhysicalCard) {
+      // Clear ID validation state when physical card is disabled
+      setIdError('');
+      setIdValid(false);
+      setIdChecking(false);
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      if (form.id && form.id.trim() !== '') {
+        checkStudentId(form.id);
+      }
+    }, 500); // Check after 500ms of no typing
+
+    return () => clearTimeout(timer);
+  }, [form.id, withPhysicalCard]);
+
   const router = useRouter();
   
   // React Query hook for creating students
   const createStudentMutation = useCreateStudent();
+
+  // Check if student ID is available
+  const checkStudentId = async (id) => {
+    if (!id || id.trim() === '') {
+      setIdError('');
+      setIdValid(false);
+      return;
+    }
+
+    setIdChecking(true);
+    setIdError('');
+
+    try {
+      const response = await fetch(`/api/students/${id}`);
+      if (response.ok) {
+        // Student exists with this ID
+        setIdError('This ID is used, please use another ID');
+        setIdValid(false);
+      } else if (response.status === 404) {
+        // Student doesn't exist, ID is available
+        setIdError('');
+        setIdValid(true);
+      } else {
+        setIdError('Error checking ID availability');
+        setIdValid(false);
+      }
+    } catch (error) {
+      setIdError('Error checking ID availability');
+      setIdValid(false);
+    } finally {
+      setIdChecking(false);
+    }
+  };
 
   const handleChange = (e) => {
     // Reset QR button if user starts entering new data (when form was previously empty)
@@ -99,6 +178,19 @@ export default function AddStudent() {
     e.preventDefault();
     setError("");
     setSuccess(false);
+    
+    // Validate custom ID only if WITH_PHISICAL_CARD is true
+    if (withPhysicalCard) {
+      if (!form.id || form.id.trim() === '') {
+        setError("Student ID is required");
+        return;
+      }
+      
+      if (!idValid) {
+        setError("Please enter a valid, unused student ID");
+        return;
+      }
+    }
     
     // Validate phone numbers
     const studentPhone = formatPhoneForDB(form.phone);
@@ -141,13 +233,19 @@ export default function AddStudent() {
     delete payload.comment;
     delete payload.parentsPhone;
     
+    // Only include ID in payload if WITH_PHISICAL_CARD is true
+    // If false, the API will auto-generate the ID
+    if (!withPhysicalCard) {
+      delete payload.id;
+    }
+    
     createStudentMutation.mutate(payload, {
       onSuccess: (data) => {
         setSuccess(true);
-        const generatedId = data.id || data.data?.id;
+        const studentId = withPhysicalCard ? form.id : (data.id || data.data?.id || data.newId || 'N/A');
         const vac = data.vac || data.data?.vac;
-        setSuccessMessage(`✅ Student added successfully! ID: ${generatedId}`);
-        setNewId(generatedId);
+        setSuccessMessage(`✅ Student added successfully! ID: ${studentId}`);
+        setNewId(studentId.toString());
         setVacCode(vac || "");
         setShowQRButton(true); // Show QR button after successful submission
       },
@@ -171,6 +269,7 @@ export default function AddStudent() {
 
   const handleAddAnotherStudent = () => {
     setForm({
+      id: "",
       name: "",
       age: "",
       gender: "",
@@ -324,6 +423,32 @@ Best regards
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(135, 206, 235, 0.4);
           }
+          .id-feedback {
+            margin-top: 8px;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+          }
+          .id-feedback.checking {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+          }
+          .id-feedback.taken {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+          }
+          .id-feedback.available {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+          }
+          .error-border {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
+          }
           .success-message {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
@@ -456,6 +581,40 @@ Best regards
         </Title>
         <div className="form-container">
           <form onSubmit={handleSubmit}>
+            {withPhysicalCard && (
+              <div className="form-group">
+                <label>Student ID <span style={{color: 'red'}}>*</span></label>
+                <input
+                  className={`form-input ${idError ? 'error-border' : ''}`}
+                  name="id"
+                  placeholder="Enter student ID"
+                  value={form.id}
+                  onChange={handleChange}
+                  required
+                  autocomplete="off"
+                />
+                {/* ID availability feedback */}
+                {form.id && (
+                  <div>
+                    {idChecking && (
+                      <div className="id-feedback checking">
+                        🔍 Checking availability...
+                      </div>
+                    )}
+                    {!idChecking && idError && (
+                      <div className="id-feedback taken">
+                        ❌ {idError}
+                      </div>
+                    )}
+                    {!idChecking && idValid && !idError && (
+                      <div className="id-feedback available">
+                        ✅ This ID is available
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="form-group">
               <label>Full Name <span style={{color: 'red'}}>*</span></label>
               <input
@@ -584,7 +743,7 @@ Best regards
           </div>
             <button 
               type="submit" 
-              disabled={createStudentMutation.isPending} 
+              disabled={createStudentMutation.isPending || configLoading || (withPhysicalCard && (idChecking || (idError && !idValid)))} 
               className="submit-btn"
             >
               {createStudentMutation.isPending ? "Adding..." : "Add Student"}
