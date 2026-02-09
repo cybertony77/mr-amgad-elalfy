@@ -94,12 +94,13 @@ export default async function handler(req, res) {
     
     if (!matchingResult) {
       console.log('❌ No matching result found');
-      return res.status(404).json({ 
-        error: 'Homework result not found',
-        debug: {
-          searched_homework_id: homework_id,
-          available_homework_ids: onlineHomeworks.map(hw => hw.homework_id)
-        }
+      // Return homework data even if no result exists, so frontend can handle gracefully
+      return res.status(200).json({ 
+        success: false,
+        homework: homework,
+        result: null,
+        error: 'Homework result not found. You may not have completed this homework yet.',
+        hasResult: false
       });
     }
     
@@ -109,7 +110,8 @@ export default async function handler(req, res) {
     res.json({ 
       success: true,
       homework: homework,
-      result: matchingResult
+      result: matchingResult,
+      hasResult: true
     });
   } catch (error) {
     console.error('❌ Error fetching homework details:', error);

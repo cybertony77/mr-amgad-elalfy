@@ -263,8 +263,8 @@ export default function JoinWhatsappGroup() {
   }, [showEditSuccess]);
 
   const handleAddGroup = () => {
-    if (!newTitle.trim() || !newGrade || !newCenter || !newGender || !newLink.trim()) {
-      setError('All fields are required');
+    if (!newTitle.trim() || !newGrade || !newGender || !newLink.trim()) {
+      setError('Title, Grade, Gender, and Link are required');
       return;
     }
     
@@ -276,7 +276,7 @@ export default function JoinWhatsappGroup() {
     createMutation.mutate({
       title: newTitle.trim(),
       grade: newGrade,
-      center: newCenter,
+      center: newCenter || '',
       gender: newGender,
       link: newLink.trim()
     });
@@ -293,8 +293,8 @@ export default function JoinWhatsappGroup() {
   };
 
   const handleUpdateGroup = () => {
-    if (!editTitle.trim() || !editGrade || !editCenter || !editGender || !editLink.trim()) {
-      setError('All fields are required');
+    if (!editTitle.trim() || !editGrade || !editGender || !editLink.trim()) {
+      setError('Title, Grade, Gender, and Link are required');
       return;
     }
     
@@ -308,7 +308,7 @@ export default function JoinWhatsappGroup() {
       data: {
         title: editTitle.trim(),
         grade: editGrade,
-        center: editCenter,
+        center: editCenter || '',
         gender: editGender,
         link: editLink.trim()
       }
@@ -520,13 +520,15 @@ export default function JoinWhatsappGroup() {
                   }}>
                     {group.title}
                   </h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
                     <span style={{ color: '#666', fontSize: '0.9rem' }}>
                       <strong>Grade:</strong> {group.grade}
                     </span>
-                    <span style={{ color: '#666', fontSize: '0.9rem' }}>
-                      <strong>Center:</strong> {group.center}
-                    </span>
+                    {group.center && group.center.trim() !== '' && (
+                      <span style={{ color: '#666', fontSize: '0.9rem' }}>
+                        <strong>Center:</strong> {group.center}
+                      </span>
+                    )}
                     <span style={{ color: '#666', fontSize: '0.9rem' }}>
                       <strong>Gender:</strong> {group.gender}
                     </span>
@@ -748,7 +750,7 @@ export default function JoinWhatsappGroup() {
               </div>
               
               <div className="form-field">
-                <label>Center <span className="required-star">*</span></label>
+                <label>Center</label>
                 <CenterSelect
                   selectedCenter={newCenter}
                   onCenterChange={(center) => {
@@ -887,7 +889,7 @@ export default function JoinWhatsappGroup() {
               </div>
               
               <div className="form-field">
-                <label>Center <span className="required-star">*</span></label>
+                <label>Center</label>
                 <CenterSelect
                   selectedCenter={editCenter}
                   onCenterChange={(center) => {

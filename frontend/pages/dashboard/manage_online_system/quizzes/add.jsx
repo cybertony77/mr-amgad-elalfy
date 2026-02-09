@@ -24,12 +24,14 @@ export default function AddQuiz() {
     deadline_date: '',
     timer_type: 'no_timer',
     timer: null,
+    shuffle_questions_and_answers: false,
     questions: [{
       question_text: '',
       question_picture: null,
       answers: ['A', 'B'],
       answer_texts: ['', ''], // Text for each answer option
-      correct_answer: ''
+      correct_answer: '',
+      question_explanation: '' // Explanation for the question (optional)
     }] || []
   });
   const [selectedGrade, setSelectedGrade] = useState('');
@@ -92,15 +94,25 @@ export default function AddQuiz() {
   const handleImageUpload = async (questionIndex, file) => {
     if (!file) return;
 
+    // Allowed image MIME types
+    const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
+    
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setErrors(prev => ({ ...prev, [`question_${questionIndex}_image`]: '❌ Please select an image file' }));
+    if (!file.type || !ALLOWED_MIME_TYPES.includes(file.type)) {
+      setErrors(prev => ({ ...prev, [`question_${questionIndex}_image`]: '❌ Invalid file type. Only image formats (JPEG/JPG, PNG, GIF, SVG, WEBP, ICO) are allowed.' }));
       return;
     }
 
     // Validate file size (10 MB)
-    if (file.size > 10 * 1024 * 1024) {
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
       setErrors(prev => ({ ...prev, [`question_${questionIndex}_image`]: '❌ Sorry, Max image size is 10 MB, Please try another picture' }));
+      // Clear preview if exists
+      setImagePreviews(prev => {
+        const newPreviews = { ...prev };
+        delete newPreviews[questionIndex];
+        return newPreviews;
+      });
       return;
     }
 
@@ -154,6 +166,12 @@ export default function AddQuiz() {
         if (!errorMessage.startsWith('❌')) {
           errorMessage = `❌ ${errorMessage}`;
         }
+        // Check if it's a size error
+        if (errorMessage.toLowerCase().includes('max image size') || errorMessage.toLowerCase().includes('size is 10 mb') || errorMessage.toLowerCase().includes('too large')) {
+          errorMessage = '❌ Sorry, Max image size is 10 MB, Please try another picture';
+        }
+      } else if (err.response?.status === 413 || err.message?.includes('413') || err.message?.includes('PayloadTooLargeError')) {
+        errorMessage = '❌ Sorry, Max image size is 10 MB, Please try another picture';
       } else if (err.message?.includes('ERR_CONNECTION_RESET') || err.message?.includes('Network Error') || err.code === 'ECONNRESET') {
         errorMessage = '❌ Connection error. The image may be too large. Please try a smaller image (max 10 MB).';
       } else if (err.message) {
@@ -339,7 +357,8 @@ export default function AddQuiz() {
         question_picture: null,
         answers: ['A', 'B'],
         answer_texts: ['', ''],
-        correct_answer: ''
+        correct_answer: '',
+        question_explanation: ''
       }]
     }));
   };
@@ -427,6 +446,11 @@ export default function AddQuiz() {
         }
       }
     }
+    
+    // Validate shuffle_questions_and_answers is required
+    if (formData.shuffle_questions_and_answers === undefined || formData.shuffle_questions_and_answers === null) {
+      newErrors.shuffle_questions_and_answers = '❌ Shuffle Questions and Answers is required';
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -472,6 +496,7 @@ export default function AddQuiz() {
       deadline_type: formData.deadline_type,
       deadline_date: formData.deadline_type === 'with_deadline' ? formData.deadline_date : null,
       timer: formData.timer_type === 'with_timer' ? parseInt(formData.timer) : null,
+      shuffle_questions_and_answers: formData.shuffle_questions_and_answers,
     };
 
     if (formData.questions && Array.isArray(formData.questions)) {
@@ -480,7 +505,8 @@ export default function AddQuiz() {
         question_picture: q.question_picture,
         answers: q.answers,
         answer_texts: q.answer_texts || [],
-        correct_answer: q.correct_answer
+        correct_answer: q.correct_answer,
+        question_explanation: q.question_explanation || ''
       }));
     }
 
@@ -717,6 +743,37 @@ export default function AddQuiz() {
                 )}
               </div>
             )}
+
+            {/* Shuffle Questions and Answers Radio */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', textAlign: 'left' }}>
+                Shuffle Questions and Answers <span style={{ color: 'red' }}>*</span>
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', border: formData.shuffle_questions_and_answers === false ? '2px solid #1FA8DC' : '2px solid #e9ecef', backgroundColor: formData.shuffle_questions_and_answers === false ? '#f0f8ff' : 'white' }}>
+                  <input
+                    type="radio"
+                    name="shuffle_questions_and_answers"
+                    value="false"
+                    checked={formData.shuffle_questions_and_answers === false}
+                    onChange={(e) => setFormData({ ...formData, shuffle_questions_and_answers: false })}
+                    style={{ marginRight: '10px', width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: '500' }}>No</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', border: formData.shuffle_questions_and_answers === true ? '2px solid #1FA8DC' : '2px solid #e9ecef', backgroundColor: formData.shuffle_questions_and_answers === true ? '#f0f8ff' : 'white' }}>
+                  <input
+                    type="radio"
+                    name="shuffle_questions_and_answers"
+                    value="true"
+                    checked={formData.shuffle_questions_and_answers === true}
+                    onChange={(e) => setFormData({ ...formData, shuffle_questions_and_answers: true })}
+                    style={{ marginRight: '10px', width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: '500' }}>Yes</span>
+                </label>
+              </div>
+            </div>
 
                 {/* Questions */}
                 {formData.questions && Array.isArray(formData.questions) && formData.questions.map((question, qIdx) => (
@@ -1122,6 +1179,28 @@ export default function AddQuiz() {
                   )}
                 </div>
 
+                {/* Question Explanation */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', textAlign: 'left' }}>
+                    Question Explanation
+                  </label>
+                  <textarea
+                    value={question.question_explanation || ''}
+                    onChange={(e) => handleQuestionChange(qIdx, 'question_explanation', e.target.value)}
+                    placeholder="Enter explanation for this question (optional)"
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: '2px solid #e9ecef',
+                      borderRadius: '10px',
+                      fontSize: '1rem',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      minHeight: '100px'
+                    }}
+                  />
+                </div>
               </div>
             ))}
 

@@ -7,7 +7,7 @@ import { useSystemConfig } from '../../lib/api/system';
 
 export default function GenerateLink() {
   const { data: systemConfig } = useSystemConfig();
-  const systemName = systemConfig?.name || 'Demo Attendance System';
+  const systemName = systemConfig?.name || 'Mr. Amgad El-Alfy Math Academy';
   const [studentId, setStudentId] = useState('');
   const [generatedLink, setGeneratedLink] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -715,8 +715,28 @@ export default function GenerateLink() {
                       <button
                         className="whatsapp-btn"
                         onClick={() => {
-                          // Use phone number as stored in DB (already includes country code)
-                          const formattedPhone = selectedStudent.phone.replace(/[^0-9]/g, '');
+                          // Use phone number as stored in DB
+                          let formattedPhone = selectedStudent.phone.replace(/[^0-9]/g, '');
+                          
+                          // Validate country code: if number starts with 012, 011, 010, or 015, allow without country code
+                          // Otherwise, require country code (starts with 20 for Egypt)
+                          const startsWithEgyptPrefix = formattedPhone.startsWith('012') || 
+                                                         formattedPhone.startsWith('011') || 
+                                                         formattedPhone.startsWith('010') || 
+                                                         formattedPhone.startsWith('015');
+                          
+                          const hasCountryCode = formattedPhone.startsWith('20');
+                          
+                          if (!startsWithEgyptPrefix && !hasCountryCode) {
+                            alert('Country code required. Please add country code (e.g., 20 for Egypt)');
+                            return;
+                          }
+                          
+                          // If number starts with 012/011/010/015, remove first 0 and prepend 20 (Egypt country code)
+                          if (startsWithEgyptPrefix && !hasCountryCode) {
+                            formattedPhone = '20' + formattedPhone.substring(1); // Remove first 0
+                          }
+                          
                           const message = `Follow up Message:
 
 Dear ${selectedStudent.name?.split(' ')[0] || 'Student'},
@@ -772,8 +792,28 @@ We wish you gets high scores 😊❤
                       <button
                         className="whatsapp-btn"
                         onClick={() => {
-                          // Use phone number as stored in DB (already includes country code)
-                          const phoneNumber = (selectedStudent.parents_phone || selectedStudent.parentsPhone || selectedStudent.parentsPhone1).replace(/[^0-9]/g, '');
+                          // Use phone number as stored in DB
+                          let phoneNumber = (selectedStudent.parents_phone || selectedStudent.parentsPhone || selectedStudent.parentsPhone1).replace(/[^0-9]/g, '');
+                          
+                          // Validate country code: if number starts with 012, 011, 010, or 015, allow without country code
+                          // Otherwise, require country code (starts with 20 for Egypt)
+                          const startsWithEgyptPrefix = phoneNumber.startsWith('012') || 
+                                                         phoneNumber.startsWith('011') || 
+                                                         phoneNumber.startsWith('010') || 
+                                                         phoneNumber.startsWith('015');
+                          
+                          const hasCountryCode = phoneNumber.startsWith('20');
+                          
+                          if (!startsWithEgyptPrefix && !hasCountryCode) {
+                            alert('Country code required. Please add country code (e.g., 20 for Egypt)');
+                            return;
+                          }
+                          
+                          // If number starts with 012/011/010/015, remove first 0 and prepend 20 (Egypt country code)
+                          if (startsWithEgyptPrefix && !hasCountryCode) {
+                            phoneNumber = '20' + phoneNumber.substring(1); // Remove first 0
+                          }
+                          
                           const formattedPhone = phoneNumber;
                           const message = `Follow up Message:
 

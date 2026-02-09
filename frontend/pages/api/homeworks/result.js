@@ -75,7 +75,9 @@ export default async function handler(req, res) {
         questions: homework.questions.map(q => ({
           question_picture: q.question_picture,
           question: q.question,
+          question_text: q.question_text,
           answers: q.answers,
+          answer_texts: q.answer_texts || [],
           correct_answer: q.correct_answer,
           question_level: q.question_level
         }))

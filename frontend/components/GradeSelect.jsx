@@ -29,7 +29,7 @@ export default function GradeSelect({ selectedGrade, onGradeChange, required = f
     actualOnClose();
   };
 
-  const grades = ["3rd Preparatory", "1st Secondary", "2nd Secondary", "3rd Secondary"];
+  const grades = ["3rd Preparatory", "1st Secondary", "2nd Secondary Application", "2nd Secondary Math", "3rd Secondary"];
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>

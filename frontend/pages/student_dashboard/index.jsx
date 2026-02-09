@@ -372,9 +372,10 @@ export default function StudentDashboard() {
   const [hasAvailableGroups, setHasAvailableGroups] = useState(false);
 
   // Check for available groups on mount and when student data changes
+  // This is NOT related to SYSTEM_WHATSAPP_JOIN_GROUP - check regardless of that setting
   useEffect(() => {
     const checkAvailableGroups = async () => {
-      if (!isWhatsAppJoinGroupEnabled || !studentId) {
+      if (!studentId) {
         setHasAvailableGroups(false);
         return;
       }
@@ -390,7 +391,7 @@ export default function StudentDashboard() {
     };
     
     checkAvailableGroups();
-  }, [isWhatsAppJoinGroupEnabled, studentId]);
+  }, [studentId]);
 
   const handleJoinWhatsAppGroup = async () => {
     if (!studentId) return;
@@ -413,7 +414,7 @@ export default function StudentDashboard() {
         // No matching groups - show premium popup
         setWhatsAppMessageContent({
           type: 'info',
-          message: 'No WhatsApp groups available for your grade, center, and gender.'
+          message: 'No WhatsApp groups available for your grade' + (studentData?.main_center ? ', center, and gender' : ' and gender') + '.'
         });
         setShowWhatsAppMessagePopup(true);
       }
@@ -1043,7 +1044,7 @@ export default function StudentDashboard() {
                 <Image src="/message.svg" alt="Phone" width={20} height={20} />
                 Contact Assistants
               </button>
-              {isWhatsAppJoinGroupEnabled && hasAvailableGroups && (
+              {hasAvailableGroups && (
                 <button
                   className="dashboard-btn whatsapp-btn"
                   onClick={handleJoinWhatsAppGroup}

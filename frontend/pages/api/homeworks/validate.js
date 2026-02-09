@@ -76,7 +76,9 @@ export default async function handler(req, res) {
       
       if (originalQ && answers[idx] !== undefined) {
         const selectedLetter = String.fromCharCode(65 + answers[idx]); // A, B, C, etc.
-        const isCorrect = selectedLetter.toLowerCase() === originalQ.correct_answer.toLowerCase();
+        // Handle both string and array formats for correct_answer
+        const correctAnswerLetter = Array.isArray(originalQ.correct_answer) ? originalQ.correct_answer[0] : originalQ.correct_answer;
+        const isCorrect = selectedLetter.toLowerCase() === correctAnswerLetter.toLowerCase();
         if (isCorrect) correctCount++;
         results.push({ isCorrect, questionIndex: idx });
       }

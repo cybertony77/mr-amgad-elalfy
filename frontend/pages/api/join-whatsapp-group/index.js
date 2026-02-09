@@ -60,14 +60,14 @@ export default async function handler(req, res) {
       // Create new WhatsApp group
       const { title, grade, center, gender, link } = req.body;
 
-      if (!title || !grade || !center || !gender || !link) {
-        return res.status(400).json({ error: 'All fields are required' });
+      if (!title || !grade || !gender || !link) {
+        return res.status(400).json({ error: 'Title, Grade, Gender, and Link are required' });
       }
 
       const newGroup = {
         title: title.trim(),
         grade: grade.trim(),
-        center: center.trim(),
+        center: (center || '').trim(),
         gender: gender.trim(),
         link: link.trim(),
         createdAt: new Date(),
@@ -91,8 +91,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Group ID is required' });
       }
 
-      if (!title || !grade || !center || !gender || !link) {
-        return res.status(400).json({ error: 'All fields are required' });
+      if (!title || !grade || !gender || !link) {
+        return res.status(400).json({ error: 'Title, Grade, Gender, and Link are required' });
       }
 
       let query;
@@ -105,7 +105,7 @@ export default async function handler(req, res) {
       const updateData = {
         title: title.trim(),
         grade: grade.trim(),
-        center: center.trim(),
+        center: (center || '').trim(),
         gender: gender.trim(),
         link: link.trim(),
         updatedAt: new Date()

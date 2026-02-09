@@ -168,31 +168,146 @@ export default function HomeworkDetails() {
 
   // Parse student answers from saved result
   const studentAnswers = result.student_answers || {};
+  const shuffleMapping = result.shuffle_mapping || null;
 
-  // Calculate statistics and build question results - match by index directly
+  // Reconstruct shuffled arrangement if shuffle_mapping exists
+  let displayQuestions = [];
+  let originalToShuffled = null;
+  
+  if (shuffleMapping && shuffleMapping.questionOrder) {
+    // Create mapping: original index -> shuffled index
+    originalToShuffled = {};
+    shuffleMapping.questionOrder.forEach(({ shuffledIndex, originalIndex }) => {
+      originalToShuffled[originalIndex] = shuffledIndex;
+    });
+    
+    // Reconstruct shuffled questions array
+    const shuffledQuestions = new Array(homework.questions.length);
+    homework.questions.forEach((origQ, origIdx) => {
+      const shuffledIdx = originalToShuffled[origIdx];
+      if (shuffledIdx !== undefined) {
+        // Get shuffled answer order for this question
+        const answerOrder = shuffleMapping.answerOrder[shuffledIdx] || {};
+        
+        // Create reverse mapping: original letter -> shuffled letter
+        const reverseAnswerMapping = {};
+        Object.keys(answerOrder).forEach(shuffledLetter => {
+          reverseAnswerMapping[answerOrder[shuffledLetter]] = shuffledLetter.toUpperCase();
+        });
+        
+        // Reconstruct shuffled question
+        const shuffledQ = { ...origQ };
+        
+        // Get original answer indices in shuffled order
+        const shuffledAnswerIndices = [];
+        origQ.answers.forEach((origLetter, origAnsIdx) => {
+          const shuffledLetter = reverseAnswerMapping[origLetter.toLowerCase()] || origLetter;
+          const shuffledAnsIdx = shuffledQ.answers.indexOf(shuffledLetter);
+          if (shuffledAnsIdx !== -1) {
+            shuffledAnswerIndices.push(shuffledAnsIdx);
+          } else {
+            // Fallback: find by matching answer_texts
+            shuffledAnswerIndices.push(origAnsIdx);
+          }
+        });
+        
+        // Reorder answers and answer_texts based on shuffled order
+        const reorderedAnswers = [];
+        const reorderedAnswerTexts = [];
+        shuffledAnswerIndices.forEach(shuffledAnsIdx => {
+          if (shuffledAnsIdx < origQ.answers.length) {
+            reorderedAnswers.push(origQ.answers[shuffledAnsIdx]);
+            reorderedAnswerTexts.push(origQ.answer_texts[shuffledAnsIdx] || '');
+          }
+        });
+        
+        shuffledQ.answers = reorderedAnswers.length > 0 ? reorderedAnswers : origQ.answers;
+        shuffledQ.answer_texts = reorderedAnswerTexts.length > 0 ? reorderedAnswerTexts : origQ.answer_texts;
+        
+        shuffledQuestions[shuffledIdx] = shuffledQ;
+      }
+    });
+    
+    displayQuestions = shuffledQuestions;
+  } else {
+    // No shuffling - use original order
+    displayQuestions = homework.questions;
+  }
+
+  // Calculate statistics and build question results - use shuffled order for display
   let correctCount = 0;
   let unansweredCount = 0;
   const questionResults = [];
 
-  // Process all questions from homework - match student answers by index
-  homework.questions.forEach((fullQuestion, questionIdx) => {
-    // Match student answer by index: student_answers["0"] -> questions[0]
-    const studentAnswerLetter = studentAnswers[questionIdx.toString()] || studentAnswers[questionIdx];
-    const studentAnswer = studentAnswerLetter ? studentAnswerLetter.toUpperCase() : null;
-    const correctAnswer = fullQuestion.correct_answer ? fullQuestion.correct_answer.toUpperCase() : null;
-    const isCorrect = studentAnswer && correctAnswer && studentAnswer === correctAnswer;
+  // Process questions in display order (shuffled or original)
+  displayQuestions.forEach((displayQuestion, displayIdx) => {
+    // Find original index
+    let originalIdx = displayIdx;
+    if (shuffleMapping && originalToShuffled) {
+      // Find original index from shuffled index
+      const mapping = shuffleMapping.questionOrder.find(m => m.shuffledIndex === displayIdx);
+      if (mapping) {
+        originalIdx = mapping.originalIndex;
+      }
+    }
+    
+    // Get student answer using original index (student_answers uses original indices)
+    const studentAnswerLetter = studentAnswers[originalIdx.toString()] || studentAnswers[originalIdx];
+    // Handle both string and array formats [letter, text]
+    let studentAnswer = null;
+    let studentAnswerText = null;
+    if (studentAnswerLetter) {
+      if (Array.isArray(studentAnswerLetter) && studentAnswerLetter.length > 0) {
+        studentAnswer = typeof studentAnswerLetter[0] === 'string' ? studentAnswerLetter[0].toUpperCase() : null;
+        studentAnswerText = studentAnswerLetter[1] || null;
+      } else if (typeof studentAnswerLetter === 'string') {
+        studentAnswer = studentAnswerLetter.toUpperCase();
+      }
+    }
+    
+    // Get correct answer from original question
+    const originalQuestion = homework.questions[originalIdx];
+    // Handle both string and array formats for correct_answer
+    let correctAnswer = null;
+    let correctAnswerText = null;
+    if (originalQuestion?.correct_answer) {
+      if (Array.isArray(originalQuestion.correct_answer) && originalQuestion.correct_answer.length > 0) {
+        correctAnswer = originalQuestion.correct_answer[0]?.toUpperCase() || null;
+        correctAnswerText = originalQuestion.correct_answer[1] || null;
+      } else if (typeof originalQuestion.correct_answer === 'string') {
+        correctAnswer = originalQuestion.correct_answer.toUpperCase();
+      }
+    }
+    
+    // Check if correct
+    // Note: student_answers are stored in original format [originalLetter, originalText] 
+    // (already mapped back from shuffled view), so we can compare directly
+    let isCorrect = false;
+    if (studentAnswer && correctAnswer) {
+      // Direct comparison - stored answer is already in original format
+      if (correctAnswerText) {
+        // If correct answer has text, check both letter and text
+        isCorrect = studentAnswer === correctAnswer && studentAnswerText === correctAnswerText;
+      } else {
+        // If no text, just check letter
+        isCorrect = studentAnswer === correctAnswer;
+      }
+    }
+    
     const isAnswered = studentAnswer !== null && studentAnswer !== undefined;
 
     if (isCorrect) correctCount++;
     if (!isAnswered) unansweredCount++;
 
     questionResults.push({
-      question: fullQuestion,
+      question: displayQuestion, // Use shuffled question for display
       studentAnswer: studentAnswer || 'Not answered',
+      studentAnswerText: studentAnswerText || null, // Store answer text for matching in shuffled view
       correctAnswer: correctAnswer || 'N/A',
       isCorrect,
       isAnswered,
-      wasShown: true
+      wasShown: true,
+      originalIndex: originalIdx // Keep track of original index for reference
     });
   });
 
@@ -290,10 +405,25 @@ export default function HomeworkDetails() {
               const question = item.question;
               const answerOptions = ['A', 'B', 'C', 'D'];
               const correctAnswerIdx = answerOptions.indexOf(item.correctAnswer);
-              // Convert student answer letter to index (e.g., "A" -> 0, "B" -> 1)
-              const studentAnswerIdx = item.isAnswered && item.studentAnswer !== 'Not answered' 
-                ? answerOptions.indexOf(item.studentAnswer.toUpperCase()) 
-                : -1;
+              
+              // Find student's selected answer index
+              // When answer_texts exist and shuffling was enabled, use text to find the answer
+              let studentAnswerIdx = -1;
+              if (item.isAnswered && item.studentAnswer !== 'Not answered') {
+                if (item.studentAnswerText && question.answer_texts && Array.isArray(question.answer_texts)) {
+                  // Find which answer in the displayed question has the student's selected text
+                  const textIndex = question.answer_texts.findIndex(text => text === item.studentAnswerText);
+                  if (textIndex !== -1) {
+                    studentAnswerIdx = textIndex;
+                  } else {
+                    // Fallback: use letter if text not found
+                    studentAnswerIdx = answerOptions.indexOf(item.studentAnswer.toUpperCase());
+                  }
+                } else {
+                  // No answer_texts - use letter
+                  studentAnswerIdx = answerOptions.indexOf(item.studentAnswer.toUpperCase());
+                }
+              }
 
               return (
                 <div
@@ -346,7 +476,20 @@ export default function HomeworkDetails() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {question.answers.map((answer, ansIdx) => {
                       const isCorrect = ansIdx === correctAnswerIdx;
-                      const isSelected = ansIdx === studentAnswerIdx;
+                      
+                      // Determine if this answer was selected by the student
+                      // When answer_texts exist, use text matching (for shuffled answers)
+                      let isSelected = false;
+                      if (item.isAnswered && item.studentAnswer !== 'Not answered') {
+                        if (item.studentAnswerText && question.answer_texts && question.answer_texts[ansIdx]) {
+                          // Match by text - this handles shuffled answers correctly
+                          isSelected = question.answer_texts[ansIdx] === item.studentAnswerText;
+                        } else {
+                          // Fallback: match by letter/index
+                          isSelected = ansIdx === studentAnswerIdx;
+                        }
+                      }
+                      
                       const isWrong = isSelected && !isCorrect;
                       const showCorrect = !item.isAnswered || isCorrect;
 
@@ -407,6 +550,27 @@ export default function HomeworkDetails() {
                       );
                     })}
                   </div>
+
+                  {/* Question Explanation */}
+                  {question.question_explanation && question.question_explanation.trim() !== '' && (
+                    <div style={{
+                      marginTop: '16px',
+                      padding: '12px 16px',
+                      backgroundColor: '#e7f3ff',
+                      border: '2px solid #1FA8DC',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                      color: '#004085',
+                      lineHeight: '1.6'
+                    }}>
+                      <div style={{ fontWeight: '600', marginBottom: '8px', color: '#1FA8DC' }}>
+                        💡 Explanation:
+                      </div>
+                      <div style={{ whiteSpace: 'pre-wrap' }}>
+                        {question.question_explanation}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Not Answered Indicator */}
                   {!item.isAnswered && (

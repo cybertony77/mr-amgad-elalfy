@@ -731,54 +731,62 @@ export default async function handler(req, res) {
     }
     
     // Save to scoring_system_history collection (always save, even if points are 0)
-    try {
-      // Calculate base_points (points for current state only, not net change)
-      let basePointsForHistory = pointsToAdd;
-      if (type === 'quiz' && data.percentage !== undefined && data.percentage !== null && !data.reverseOnly) {
-        // For quiz, base_points should be the points for the current percentage only
-        const currentStatePoints = await evaluateRule(zenRule, { percentage: data.percentage });
-        basePointsForHistory = currentStatePoints;
-      } else if (type === 'homework' && data.hwDone !== undefined && !data.reverseOnly) {
-        // For homework, base_points should be the points for the current hwDone state only
-        // Special case: If hwDone is false and there's no previous state, base_points should be 0
-        // (not -20) because we don't apply the penalty for students who never had homework
-        if (data.hwDone === false && (data.previousHwDone === null || data.previousHwDone === undefined)) {
-          basePointsForHistory = 0;
-        } else {
-          const currentStatePoints = await evaluateRule(zenRule, { hwDone: data.hwDone });
-          basePointsForHistory = currentStatePoints;
-        }
-      } else if (type === 'attendance' && data.status !== undefined && !data.reverseOnly) {
-        // For attendance, base_points should be the points for the current status only
-        const currentStatePoints = await evaluateRule(zenRule, { status: data.status });
-        basePointsForHistory = currentStatePoints;
-      } else if (type === 'homework' && condition.withDegree === true && data.percentage !== undefined && data.percentage !== null && !data.reverseOnly) {
-        // For homework with degree, base_points should be the points for the current percentage only
-        const currentStatePoints = await evaluateRule(zenRule, { percentage: data.percentage });
+    // Calculate base_points (points for current state only, not net change)
+    let basePointsForHistory = pointsToAdd;
+    if (type === 'quiz' && data.percentage !== undefined && data.percentage !== null && !data.reverseOnly) {
+      // For quiz, base_points should be the points for the current percentage only
+      const currentStatePoints = await evaluateRule(zenRule, { percentage: data.percentage });
+      basePointsForHistory = currentStatePoints;
+    } else if (type === 'homework' && data.hwDone !== undefined && !data.reverseOnly) {
+      // For homework, base_points should be the points for the current hwDone state only
+      // Special case: If hwDone is false and there's no previous state, base_points should be 0
+      // (not -20) because we don't apply the penalty for students who never had homework
+      if (data.hwDone === false && (data.previousHwDone === null || data.previousHwDone === undefined)) {
+        basePointsForHistory = 0;
+      } else {
+        const currentStatePoints = await evaluateRule(zenRule, { hwDone: data.hwDone });
         basePointsForHistory = currentStatePoints;
       }
-      
-      const historyEntry = {
-        student_id: parseInt(studentId),
-        process_id: processId,
-        process_name: processName,
-        process_week: week !== undefined && week !== null ? parseInt(week) : null,
-        score_before_process: currentScore,
-        score_added: totalPoints, // Net change (includes reversing previous)
-        score_after_process: newScore,
-        type: type,
-        data: data,
-        bonus_points: bonusPoints,
-        bonus_weeks: data.bonusWeeks || [], // Weeks involved in bonus calculation
-        base_points: basePointsForHistory, // Points for current state only
-        timestamp: new Date()
-      };
-      
-      await db.collection('scoring_system_history').insertOne(historyEntry);
-      console.log(`[SCORING] History saved: ${JSON.stringify(historyEntry)}`);
+    } else if (type === 'attendance' && data.status !== undefined && !data.reverseOnly) {
+      // For attendance, base_points should be the points for the current status only
+      const currentStatePoints = await evaluateRule(zenRule, { status: data.status });
+      basePointsForHistory = currentStatePoints;
+    } else if (type === 'homework' && condition.withDegree === true && data.percentage !== undefined && data.percentage !== null && !data.reverseOnly) {
+      // For homework with degree, base_points should be the points for the current percentage only
+      const currentStatePoints = await evaluateRule(zenRule, { percentage: data.percentage });
+      basePointsForHistory = currentStatePoints;
+    }
+    
+    const historyEntry = {
+      student_id: parseInt(studentId),
+      process_id: processId,
+      process_name: processName,
+      process_week: week !== undefined && week !== null ? parseInt(week) : null,
+      score_before_process: currentScore,
+      score_added: totalPoints, // Net change (includes reversing previous)
+      score_after_process: newScore,
+      type: type,
+      data: data,
+      bonus_points: bonusPoints,
+      bonus_weeks: data.bonusWeeks || [], // Weeks involved in bonus calculation
+      base_points: basePointsForHistory, // Points for current state only
+      timestamp: new Date()
+    };
+    
+    // Always save history BEFORE updating score - if it fails, log error but continue
+    // This ensures history is saved even if score update fails
+    try {
+      const historyResult = await db.collection('scoring_system_history').insertOne(historyEntry);
+      if (historyResult.insertedId) {
+        console.log(`[SCORING] ✅ History saved successfully: ${JSON.stringify(historyEntry)}`);
+      } else {
+        console.error('❌ History insert returned no insertedId:', historyResult);
+      }
     } catch (historyError) {
-      console.error('Error saving scoring history:', historyError);
-      // Don't fail the request if history save fails
+      console.error('❌ Error saving scoring history:', historyError);
+      console.error('History entry that failed:', JSON.stringify(historyEntry, null, 2));
+      console.error('Error details:', historyError.message, historyError.stack);
+      // Don't fail the request if history save fails, but log the error
     }
 
     // Auto-reverse homework and quiz if attendance is being reversed and week is provided
@@ -804,21 +812,30 @@ export default async function handler(req, res) {
             totalPoints += hwReversePoints;
             
             // Save reverse history
-            await db.collection('scoring_system_history').insertOne({
-              student_id: parseInt(studentId),
-              process_id: `${studentId}_homework_auto_reverse_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              process_name: `Homework (auto-reverse from attendance): ${hwHistory.data?.hwDone !== undefined ? hwHistory.data.hwDone : `${hwHistory.data?.percentage || 0}%`}`,
-              process_week: parseInt(week),
-              score_before_process: scoreBeforeHwReverse,
-              score_added: hwReversePoints,
-              score_after_process: newScore,
-              type: 'homework',
-              data: hwHistory.data ? { ...hwHistory.data, reverseOnly: true, autoReversedBy: 'attendance' } : { reverseOnly: true, autoReversedBy: 'attendance' },
-              bonus_points: 0,
-              base_points: hwReversePoints,
-              timestamp: new Date()
-            });
-            console.log(`[SCORING] Auto-reversed homework: ${scoreBeforeHwReverse} → ${newScore} (${hwReversePoints >= 0 ? '+' : ''}${hwReversePoints} points)`);
+            try {
+              const autoReverseHistoryEntry = {
+                student_id: parseInt(studentId),
+                process_id: `${studentId}_homework_auto_reverse_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                process_name: `Homework (auto-reverse from attendance): ${hwHistory.data?.hwDone !== undefined ? hwHistory.data.hwDone : `${hwHistory.data?.percentage || 0}%`}`,
+                process_week: parseInt(week),
+                score_before_process: scoreBeforeHwReverse,
+                score_added: hwReversePoints,
+                score_after_process: newScore,
+                type: 'homework',
+                data: hwHistory.data ? { ...hwHistory.data, reverseOnly: true, autoReversedBy: 'attendance' } : { reverseOnly: true, autoReversedBy: 'attendance' },
+                bonus_points: 0,
+                base_points: hwReversePoints,
+                timestamp: new Date()
+              };
+              const autoReverseResult = await db.collection('scoring_system_history').insertOne(autoReverseHistoryEntry);
+              if (autoReverseResult.insertedId) {
+                console.log(`[SCORING] ✅ Auto-reverse homework history saved: ${scoreBeforeHwReverse} → ${newScore} (${hwReversePoints >= 0 ? '+' : ''}${hwReversePoints} points)`);
+              } else {
+                console.error('❌ Auto-reverse homework history insert returned no insertedId:', autoReverseResult);
+              }
+            } catch (autoReverseError) {
+              console.error('❌ Error saving auto-reverse homework history:', autoReverseError);
+            }
           }
         }
         
@@ -842,21 +859,30 @@ export default async function handler(req, res) {
             totalPoints += quizReversePoints;
             
             // Save reverse history
-            await db.collection('scoring_system_history').insertOne({
-              student_id: parseInt(studentId),
-              process_id: `${studentId}_quiz_auto_reverse_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              process_name: `Quiz (auto-reverse from attendance): ${quizHistory.data?.percentage || 0}%`,
-              process_week: parseInt(week),
-              score_before_process: scoreBeforeQuizReverse,
-              score_added: quizReversePoints,
-              score_after_process: newScore,
-              type: 'quiz',
-              data: quizHistory.data ? { ...quizHistory.data, reverseOnly: true, autoReversedBy: 'attendance' } : { percentage: 0, reverseOnly: true, autoReversedBy: 'attendance' },
-              bonus_points: 0,
-              base_points: quizReversePoints,
-              timestamp: new Date()
-            });
-            console.log(`[SCORING] Auto-reversed quiz: ${scoreBeforeQuizReverse} → ${newScore} (${quizReversePoints >= 0 ? '+' : ''}${quizReversePoints} points)`);
+            try {
+              const autoReverseHistoryEntry = {
+                student_id: parseInt(studentId),
+                process_id: `${studentId}_quiz_auto_reverse_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                process_name: `Quiz (auto-reverse from attendance): ${quizHistory.data?.percentage || 0}%`,
+                process_week: parseInt(week),
+                score_before_process: scoreBeforeQuizReverse,
+                score_added: quizReversePoints,
+                score_after_process: newScore,
+                type: 'quiz',
+                data: quizHistory.data ? { ...quizHistory.data, reverseOnly: true, autoReversedBy: 'attendance' } : { percentage: 0, reverseOnly: true, autoReversedBy: 'attendance' },
+                bonus_points: 0,
+                base_points: quizReversePoints,
+                timestamp: new Date()
+              };
+              const autoReverseResult = await db.collection('scoring_system_history').insertOne(autoReverseHistoryEntry);
+              if (autoReverseResult.insertedId) {
+                console.log(`[SCORING] ✅ Auto-reverse quiz history saved: ${scoreBeforeQuizReverse} → ${newScore} (${quizReversePoints >= 0 ? '+' : ''}${quizReversePoints} points)`);
+              } else {
+                console.error('❌ Auto-reverse quiz history insert returned no insertedId:', autoReverseResult);
+              }
+            } catch (autoReverseError) {
+              console.error('❌ Error saving auto-reverse quiz history:', autoReverseError);
+            }
           }
         }
       } catch (autoReverseError) {
@@ -877,10 +903,26 @@ export default async function handler(req, res) {
       console.log(`[SCORING] Attendance reversal completed with auto-reverse for homework and quiz`);
     }
 
+    // Calculate actual base points for current state (for display in quiz/homework result)
+    let actualBasePoints = basePointsForHistory;
+    if (type === 'quiz' && data.percentage !== undefined && data.percentage !== null && !data.reverseOnly) {
+      actualBasePoints = await evaluateRule(zenRule, { percentage: data.percentage });
+    } else if (type === 'homework' && condition.withDegree === true && data.percentage !== undefined && data.percentage !== null && !data.reverseOnly) {
+      actualBasePoints = await evaluateRule(zenRule, { percentage: data.percentage });
+    } else if (type === 'homework' && condition.withDegree === false && data.hwDone !== undefined && !data.reverseOnly) {
+      if (data.hwDone === false && (data.previousHwDone === null || data.previousHwDone === undefined)) {
+        actualBasePoints = 0;
+      } else {
+        actualBasePoints = await evaluateRule(zenRule, { hwDone: data.hwDone });
+      }
+    } else if (type === 'attendance' && data.status !== undefined && !data.reverseOnly) {
+      actualBasePoints = await evaluateRule(zenRule, { status: data.status });
+    }
+
     return res.status(200).json({
       success: true,
-      pointsAdded: totalPoints,
-      basePoints: pointsToAdd,
+      pointsAdded: totalPoints, // Net change (for score update)
+      basePoints: actualBasePoints, // Base points for current state (for display in result)
       bonusPoints: bonusPoints,
       previousScore: currentScore,
       newScore: newScore,

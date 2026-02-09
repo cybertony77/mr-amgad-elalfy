@@ -36,9 +36,13 @@ export default async function handler(req, res) {
   try {
     const envConfig = loadEnvConfig();
     const withPhysicalCard = envConfig.WITH_PHISICAL_CARD === 'true';
+    const devtoolsBlock = envConfig.DEVTOOLS_BLOCK === 'true';
     
     res.json({
-      WITH_PHISICAL_CARD: withPhysicalCard
+      WITH_PHISICAL_CARD: withPhysicalCard,
+      DEVTOOLS_BLOCK: devtoolsBlock,
+      SYSTEM_NAME: envConfig.SYSTEM_NAME || 'Mr. Amgad El-Alfy Math Academy',
+      STUDENT_SIGNUP_VIDEO: envConfig.STUDENT_SIGNUP_VIDEO || ''
     });
   } catch (error) {
     console.error('❌ Config API error:', error);

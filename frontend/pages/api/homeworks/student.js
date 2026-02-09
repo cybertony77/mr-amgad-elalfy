@@ -115,7 +115,8 @@ export default async function handler(req, res) {
             homework_type: hw.homework_type || 'questions',
             deadline_type: hw.deadline_type || 'no_deadline',
             deadline_date: hw.deadline_date || null,
-            timer: hw.timer || null
+            timer: hw.timer || null,
+            shuffle_questions_and_answers: hw.shuffle_questions_and_answers || false
           };
 
           // Add pages_from_book fields if applicable

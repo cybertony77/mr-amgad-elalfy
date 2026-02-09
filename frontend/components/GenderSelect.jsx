@@ -53,8 +53,6 @@ export default function GenderSelect({ selectedGender, onGenderChange, required 
         <span>{selectedGender || 'Select Gender'}</span>
       </div>
       
-
-      
       {actualIsOpen && (
         <div style={{
           position: 'absolute',

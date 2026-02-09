@@ -212,9 +212,8 @@ export default async function handler(req, res) {
       });
 
       let deletedEmail = null;
-      let newVAC = null;
 
-      // If user account exists, delete it and regenerate VAC
+      // If user account exists, delete it
       if (userAccount) {
         deletedEmail = userAccount.email || null;
 
@@ -223,50 +222,11 @@ export default async function handler(req, res) {
           id: student_id,
           role: 'student'
         });
-
-        // Generate new VAC code
-        const generateVACCode = () => {
-          const numbers = '0123456789';
-          const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-          const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-          
-          const numPart = Array.from({ length: 3 }, () => 
-            numbers[Math.floor(Math.random() * numbers.length)]
-          ).join('');
-          
-          const upperPart = Array.from({ length: 2 }, () => 
-            uppercase[Math.floor(Math.random() * uppercase.length)]
-          ).join('');
-          
-          const lowerPart = Array.from({ length: 2 }, () => 
-            lowercase[Math.floor(Math.random() * lowercase.length)]
-          ).join('');
-          
-          const code = (numPart + upperPart + lowerPart).split('');
-          for (let i = code.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [code[i], code[j]] = [code[j], code[i]];
-          }
-          
-          return code.join('');
-        };
-
-        const code = generateVACCode();
-        // Shuffle the code again for extra randomness
-        newVAC = code.split('').sort(() => Math.random() - 0.5).join('');
-
-        // Update or create VAC record with new code
-        await db.collection('VAC').updateOne(
-          { account_id: student_id },
-          { 
-            $set: { 
-              VAC: newVAC,
-              VAC_activated: false
-            } 
-          },
-          { upsert: true }
-        );
       }
+
+      // Delete VAC record if it exists for this student
+      const vacResult = await db.collection('VAC').deleteOne({ account_id: student_id });
+      const vacDeleted = vacResult.deletedCount > 0;
 
       // Delete student from students collection
       const result = await db.collection('students').deleteOne({ id: student_id });
@@ -276,7 +236,7 @@ export default async function handler(req, res) {
         success: true,
         accountDeleted: !!userAccount,
         email: deletedEmail,
-        VAC: newVAC
+        vacDeleted: vacDeleted
       });
     } else {
       res.status(405).json({ error: 'Method not allowed' });

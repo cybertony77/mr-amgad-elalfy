@@ -42,7 +42,8 @@ export default function AddStudent() {
   const [idValid, setIdValid] = useState(false);
   const [withPhysicalCard, setWithPhysicalCard] = useState(true); // Default to true for backward compatibility
   const [configLoading, setConfigLoading] = useState(true);
-  
+  const [systemName, setSystemName] = useState('Mr. Amgad El-Alfy Math Academy');
+  const [studentSignupVideo, setStudentSignupVideo] = useState('');
   // Fetch config on mount
   useEffect(() => {
     const fetchConfig = async () => {
@@ -51,6 +52,8 @@ export default function AddStudent() {
         if (response.ok) {
           const config = await response.json();
           setWithPhysicalCard(config.WITH_PHISICAL_CARD);
+          setSystemName(config.SYSTEM_NAME || 'Mr. Amgad El-Alfy Math Academy');
+          setStudentSignupVideo(config.STUDENT_SIGNUP_VIDEO || '');
         }
       } catch (error) {
         console.error('Failed to load config:', error);
@@ -320,30 +323,54 @@ export default function AddStudent() {
     const domain = typeof window !== 'undefined' ? window.location.origin : '';
     const signUpUrl = `${domain}/sign-up`;
 
-    // Create the message (same format as VAC page)
-    const message = `Dear Student, ${firstName}
+    // Create the message
+    let message = `Dear Student, ${firstName}
 This is Your Verification Account Code (VAC) :
 
-${vacCode}
+*${vacCode}*
 
-*Please do not share this code with anyone.*
+Please do not share this code with anyone.
 To complete your sign-up, click the link below:
 
-🖇 ${signUpUrl}
+🖇 ${signUpUrl}`;
 
-Note :- 
+    // Add video link if STUDENT_SIGNUP_VIDEO is not empty
+    if (studentSignupVideo && studentSignupVideo.trim() !== '') {
+      message += `\n\n🎥 View this video to know how to sign up : ${studentSignupVideo}`;
+    }
+
+    message += `\n\nNote :- 
    • Your ID : ${newId}
 
 Best regards
- – Tony Joseph`;
+ – ${systemName}`;
 
     // Use phone number as stored in form (already includes country code from PhoneInput)
-    const phoneNumber = form.phone.replace(/[^0-9]/g, '');
+    let phoneNumber = form.phone.replace(/[^0-9]/g, '');
     
     // Validate phone number exists
     if (!phoneNumber || phoneNumber.length < 3) {
       setError('Invalid phone number format');
       return;
+    }
+    
+    // Validate country code: if number starts with 012, 011, 010, or 015, allow without country code
+    // Otherwise, require country code (starts with 20 for Egypt)
+    const startsWithEgyptPrefix = phoneNumber.startsWith('012') || 
+                                   phoneNumber.startsWith('011') || 
+                                   phoneNumber.startsWith('010') || 
+                                   phoneNumber.startsWith('015');
+    
+    const hasCountryCode = phoneNumber.startsWith('20');
+    
+    if (!startsWithEgyptPrefix && !hasCountryCode) {
+      setError('Country code required. Please add country code (e.g., 20 for Egypt)');
+      return;
+    }
+    
+    // If number starts with 012/011/010/015, remove first 0 and prepend 20 (Egypt country code)
+    if (startsWithEgyptPrefix && !hasCountryCode) {
+      phoneNumber = '20' + phoneNumber.substring(1); // Remove first 0
     }
     
     // Create WhatsApp URL

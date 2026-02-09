@@ -244,7 +244,7 @@ export default function ContactAssistants() {
 
               <ScrollArea h="calc(20rem * var(--mantine-scale))" type="hover" className={styles.scrolled}>
                 <Table striped highlightOnHover withTableBorder withColumnBorders className="contact-assistants-table">
-                  <Table.Thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 10 }}>
+                  <Table.Thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 1 }}>
                     <Table.Tr>
                       <Table.Th style={{ width: '33%', textAlign: 'center' }}>Name</Table.Th>
                       <Table.Th style={{ width: '33%', textAlign: 'center' }}>Phone No.</Table.Th>

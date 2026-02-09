@@ -455,7 +455,12 @@ export default async function handler(req, res) {
       
       if (WITH_PHISICAL_CARD) {
         // If WITH_PHISICAL_CARD is true, require and validate the custom ID
-        if (!id || !name || !grade || !phone || !parents_phone || !main_center || age === undefined || !gender || !school) {
+        // Check if id is provided and is a valid number
+        if (!id || id === '' || isNaN(parseInt(id))) {
+          return res.status(400).json({ error: 'Student ID is required when WITH_PHISICAL_CARD is enabled' });
+        }
+        
+        if (!name || !grade || !phone || !parents_phone || !main_center || age === undefined || !gender || !school) {
           return res.status(400).json({ error: 'All fields are required' });
         }
         
@@ -468,6 +473,7 @@ export default async function handler(req, res) {
         newId = parseInt(id);
       } else {
         // If WITH_PHISICAL_CARD is false, auto-generate ID (last student ID + 1)
+        // Ignore id field completely - don't validate it even if it's sent
         if (!name || !grade || !phone || !parents_phone || !main_center || age === undefined || !gender || !school) {
           return res.status(400).json({ error: 'All fields are required' });
         }
@@ -534,14 +540,31 @@ export default async function handler(req, res) {
         return combined.split('').sort(() => Math.random() - 0.5).join('');
       };
       
-      const vacCode = generateVACCode();
+      // Check if VAC already exists for this student
+      const existingVAC = await db.collection('VAC').findOne({ account_id: newId });
       
-      // Insert VAC record
-      await db.collection('VAC').insertOne({
-        account_id: newId,
-        VAC: vacCode,
-        VAC_activated: false
-      });
+      let vacCode;
+      if (existingVAC) {
+        // Regenerate VAC code for existing record
+        vacCode = generateVACCode();
+        await db.collection('VAC').updateOne(
+          { account_id: newId },
+          {
+            $set: {
+              VAC: vacCode,
+              VAC_activated: false
+            }
+          }
+        );
+      } else {
+        // Create new VAC record
+        vacCode = generateVACCode();
+        await db.collection('VAC').insertOne({
+          account_id: newId,
+          VAC: vacCode,
+          VAC_activated: false
+        });
+      }
       
       res.json({ id: newId, newId: newId, vac: vacCode });
     } else {

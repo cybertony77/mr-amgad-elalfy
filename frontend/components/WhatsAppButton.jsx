@@ -29,8 +29,27 @@ const WhatsAppButton = ({ student, onMessageSent, onScoreUpdate }) => {
         return;
       }
       
-      // Use phone number as stored in DB (already includes country code)
-      // Don't add or remove country code
+      // Validate country code: if number starts with 012, 011, 010, or 015, allow without country code
+      // Otherwise, require country code (starts with 20 for Egypt)
+      const startsWithEgyptPrefix = parentNumber.startsWith('012') || 
+                                     parentNumber.startsWith('011') || 
+                                     parentNumber.startsWith('010') || 
+                                     parentNumber.startsWith('015');
+      
+      const hasCountryCode = parentNumber.startsWith('20');
+      
+      if (!startsWithEgyptPrefix && !hasCountryCode) {
+        setMessage('Country code required. Please add country code (e.g., 20 for Egypt)');
+        setTimeout(() => setMessage(''), 3000);
+        const weekNumber = student.currentWeekNumber || 1;
+        updateMessageStateMutation.mutate({ id: student.id, message_state: false, week: weekNumber });
+        return;
+      }
+      
+      // If number starts with 012/011/010/015, remove first 0 and prepend 20 (Egypt country code)
+      if (startsWithEgyptPrefix && !hasCountryCode) {
+        parentNumber = '20' + parentNumber.substring(1); // Remove first 0
+      }
 
       // Validate student data
       if (!student.name) {

@@ -136,11 +136,89 @@ export default function HomeworkStart() {
             }
           }
 
-          // Display questions in their original order (no shuffling)
-          setQuestions([...hw.questions]);
+          // Shuffle questions and answers if enabled
+          let shuffledQuestions = [...hw.questions];
+          let shuffleMapping = null;
+          
+          // Check shuffle flag - handle both boolean and string values
+          const shouldShuffle = hw.shuffle_questions_and_answers === true || 
+                                hw.shuffle_questions_and_answers === 'true' ||
+                                String(hw.shuffle_questions_and_answers).toLowerCase() === 'true';
+          
+          if (shouldShuffle) {
+            // Shuffle questions order
+            const questionIndices = hw.questions.map((_, idx) => idx);
+            for (let i = questionIndices.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [questionIndices[i], questionIndices[j]] = [questionIndices[j], questionIndices[i]];
+            }
+            
+            // Create shuffled questions array
+            shuffledQuestions = questionIndices.map(origIdx => {
+              const origQ = hw.questions[origIdx];
+              const shuffledQ = { ...origQ };
+              
+              // Keep answer letters in order (A, B, C, D)
+              shuffledQ.answers = [...origQ.answers];
+              
+              // Only shuffle answer_texts if they exist
+              if (origQ.answer_texts && origQ.answer_texts.length > 0) {
+                const answerTextIndices = origQ.answer_texts.map((_, idx) => idx);
+                for (let i = answerTextIndices.length - 1; i > 0; i--) {
+                  const j = Math.floor(Math.random() * (i + 1));
+                  [answerTextIndices[i], answerTextIndices[j]] = [answerTextIndices[j], answerTextIndices[i]];
+                }
+                
+                // Create shuffled answer_texts
+                shuffledQ.answer_texts = answerTextIndices.map(idx => origQ.answer_texts[idx]);
+                
+                // Create text mapping: shuffled index -> original index
+                const textMapping = {};
+                answerTextIndices.forEach((origTextIdx, shuffledTextIdx) => {
+                  textMapping[shuffledTextIdx] = origTextIdx;
+                });
+                
+                // Store text mapping in question for later use
+                shuffledQ._textMapping = textMapping;
+              } else {
+                shuffledQ.answer_texts = [];
+              }
+              
+              shuffledQ._originalIndex = origIdx;
+              
+              return shuffledQ;
+            });
+            
+            // Create question order mapping: shuffled index -> original index
+            const questionOrder = questionIndices.map((origIdx, shuffledIdx) => ({
+              shuffledIndex: shuffledIdx,
+              originalIndex: origIdx
+            }));
+            
+            // Create text order mapping: original question index -> text mapping
+            const textOrder = {};
+            shuffledQuestions.forEach((shuffledQ, shuffledIdx) => {
+              if (shuffledQ._textMapping) {
+                textOrder[shuffledIdx] = shuffledQ._textMapping;
+              }
+            });
+            
+            shuffleMapping = {
+              questionOrder,
+              textOrder
+            };
+            
+            // Store in sessionStorage for persistence
+            sessionStorage.setItem(`homework_${id}_shuffleMapping`, JSON.stringify(shuffleMapping));
+          }
+          
+          shuffleMappingRef.current = shuffleMapping;
+          
+          // Display questions (shuffled or original)
+          setQuestions(shuffledQuestions);
           
           // Load image URLs - map by question_picture public_id (unique per question)
-          const urlPromises = hw.questions.map(async (q, index) => {
+          const urlPromises = shuffledQuestions.map(async (q, index) => {
             if (q.question_picture) {
               try {
                 const imgResponse = await apiClient.get(`/api/homeworks/image?public_id=${q.question_picture}`);
@@ -279,10 +357,18 @@ export default function HomeworkStart() {
 
   const handleAnswerSelect = (questionIndex, answerLetter) => {
     // answerLetter is now directly the letter (A, B, C, D) from the answers array
+    const currentQuestion = questions[questionIndex];
+    const answerIdx = currentQuestion.answers.indexOf(answerLetter);
+    const answerText = currentQuestion.answer_texts && currentQuestion.answer_texts[answerIdx] 
+      ? currentQuestion.answer_texts[answerIdx] 
+      : null;
+    
     setSelectedAnswers(prev => {
       const newAnswers = {
         ...prev,
-        [questionIndex]: answerLetter.toLowerCase() // Store as lowercase for consistency
+        [questionIndex]: answerText 
+          ? { answer: answerLetter.toLowerCase(), text: answerText }
+          : answerLetter.toLowerCase()
       };
       // Save selected answers to sessionStorage
       if (id) {
@@ -335,20 +421,141 @@ export default function HomeworkStart() {
         return;
       }
 
-      // Calculate results - match answers by index directly to questions array
+      // Get shuffle mapping (from ref or sessionStorage)
+      const shuffleMapping = shuffleMappingRef.current || (() => {
+        const saved = sessionStorage.getItem(`homework_${id}_shuffleMapping`);
+        return saved ? JSON.parse(saved) : null;
+      })();
+      
+      // Calculate results - need to map shuffled indices/answers back to original
       let correctCount = 0;
       const totalQuestions = questions.length;
       
-      questions.forEach((questionItem, idx) => {
-        // Match by index: questions[idx] corresponds to selectedAnswers[idx]
-        const originalQ = fullHomework.questions[idx];
+      // Create mapping for quick lookup: shuffled index -> original index
+      const shuffledToOriginal = shuffleMapping ? {} : null;
+      if (shuffleMapping) {
+        shuffleMapping.questionOrder.forEach(({ shuffledIndex, originalIndex }) => {
+          shuffledToOriginal[shuffledIndex] = originalIndex;
+        });
+      }
+      
+      questions.forEach((questionItem, shuffledIdx) => {
+        // Get original question index
+        const originalIdx = shuffleMapping ? shuffledToOriginal[shuffledIdx] : shuffledIdx;
+        const originalQ = fullHomework.questions[originalIdx];
         
         if (originalQ && originalQ.correct_answer) {
-          const selectedAnswer = selectedAnswers[idx];
-          if (selectedAnswer !== undefined && selectedAnswer !== null) {
-            // selectedAnswer is already a letter (lowercase) like "a", "b", "c", "d"
-            const correctAnswer = originalQ.correct_answer.toLowerCase();
-            const isCorrect = selectedAnswer === correctAnswer;
+          const selectedAnswerData = selectedAnswers[shuffledIdx];
+          if (selectedAnswerData !== undefined && selectedAnswerData !== null) {
+            // selectedAnswerData can be:
+            // - string (just answer letter) if no text: "b"
+            // - object {answer: "b", text: "b"} if text exists
+            let selectedAnswerLetter = null;
+            let selectedAnswerText = null;
+            
+            if (typeof selectedAnswerData === 'string') {
+              selectedAnswerLetter = selectedAnswerData.toLowerCase();
+              // Get text from questionItem if answer_texts exist
+              if (questionItem && questionItem.answer_texts && Array.isArray(questionItem.answer_texts)) {
+                const answerIdx = questionItem.answers.findIndex(letter => letter.toLowerCase() === selectedAnswerLetter);
+                if (answerIdx !== -1 && questionItem.answer_texts[answerIdx]) {
+                  selectedAnswerText = questionItem.answer_texts[answerIdx];
+                }
+              }
+            } else if (typeof selectedAnswerData === 'object' && selectedAnswerData.answer) {
+              selectedAnswerLetter = selectedAnswerData.answer.toLowerCase();
+              selectedAnswerText = selectedAnswerData.text || null;
+              // If text not in object, get from questionItem
+              if (!selectedAnswerText && questionItem && questionItem.answer_texts && Array.isArray(questionItem.answer_texts)) {
+                const answerIdx = questionItem.answers.findIndex(letter => letter.toLowerCase() === selectedAnswerLetter);
+                if (answerIdx !== -1 && questionItem.answer_texts[answerIdx]) {
+                  selectedAnswerText = questionItem.answer_texts[answerIdx];
+                }
+              }
+            }
+            
+            // Get correct answer - can be string or array [answer, text]
+            let correctAnswerLetter = null;
+            let correctAnswerText = null;
+            
+            if (Array.isArray(originalQ.correct_answer) && originalQ.correct_answer.length > 0) {
+              correctAnswerLetter = originalQ.correct_answer[0]?.toLowerCase() || null;
+              correctAnswerText = originalQ.correct_answer[1] || null;
+            } else if (originalQ.correct_answer) {
+              correctAnswerLetter = typeof originalQ.correct_answer === 'string' 
+                ? originalQ.correct_answer.toLowerCase() 
+                : null;
+            }
+            
+            // Check if correct - need to map shuffled answer back to original
+            let isCorrect = false;
+            
+            // Only use text mapping if answer_texts have meaningful content
+            // If answer_texts are all empty, treat as if there are no answer_texts (just compare by letter)
+            if (hasMeaningfulAnswerTexts && shuffleMapping && shuffleMapping.textOrder && shuffleMapping.textOrder[shuffledIdx] && questionItem && questionItem.answer_texts && Array.isArray(questionItem.answer_texts) && originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts)) {
+              // Answers were shuffled - map student's selected answer back to original
+              const textMapping = shuffleMapping.textOrder[shuffledIdx];
+              if (textMapping && typeof textMapping === 'object' && !Array.isArray(textMapping)) {
+                // Get the index of the selected answer letter in the shuffled view (A=0, B=1, C=2, D=3)
+                const selectedAnswerIdx = questionItem.answers.findIndex(letter => letter.toLowerCase() === selectedAnswerLetter);
+                
+                if (selectedAnswerIdx !== -1) {
+                  // Map back to original text index using the shuffled text index
+                  // textMapping[shuffledTextIdx] = originalTextIdx
+                  const originalTextIdx = textMapping[selectedAnswerIdx];
+                  
+                  if (originalTextIdx !== undefined && originalTextIdx !== null && originalTextIdx >= 0 && originalTextIdx < originalQ.answers.length) {
+                    // Get the original answer letter at that position
+                    const originalAnswerLetter = originalQ.answers[originalTextIdx]?.toLowerCase() || null;
+                    const originalAnswerText = originalQ.answer_texts && originalQ.answer_texts[originalTextIdx] ? originalQ.answer_texts[originalTextIdx] : null;
+                    
+                    // Check if answer_texts have actual content (not all empty strings)
+                    const hasMeaningfulAnswerTexts = originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts) && 
+                      originalQ.answer_texts.length > 0 && 
+                      originalQ.answer_texts.some(text => text && text.trim() !== '');
+                    
+                    // Only use text comparison if answer_texts have meaningful content AND correctAnswerText exists and is not empty
+                    const shouldCheckByText = hasMeaningfulAnswerTexts && correctAnswerText && correctAnswerText.trim() !== '';
+                    
+                    // Check if this matches the correct answer
+                    if (shouldCheckByText) {
+                      // If answer_texts have meaningful content and correct answer has text, check both letter and text
+                      isCorrect = originalAnswerLetter === correctAnswerLetter && 
+                                 originalAnswerText === correctAnswerText;
+                    } else {
+                      // If no meaningful text, just check letter
+                      isCorrect = originalAnswerLetter === correctAnswerLetter;
+                    }
+                  }
+                }
+              }
+            } else {
+              // No shuffling - direct comparison
+              // Check if answer_texts have actual content (not all empty strings)
+              const hasMeaningfulAnswerTexts = originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts) && 
+                originalQ.answer_texts.length > 0 && 
+                originalQ.answer_texts.some(text => text && text.trim() !== '');
+              
+              // Only use text comparison if answer_texts have meaningful content AND correctAnswerText exists and is not empty
+              const shouldCheckByText = hasMeaningfulAnswerTexts && correctAnswerText && correctAnswerText.trim() !== '';
+              
+              if (shouldCheckByText) {
+                // If answer_texts have meaningful content and correct answer has text, check both letter and text
+                // Get the text from originalQ.answer_texts if selectedAnswerText is not set
+                let textToCompare = selectedAnswerText;
+                if (!textToCompare && originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts)) {
+                  const answerIdx = originalQ.answers.findIndex(letter => letter.toLowerCase() === selectedAnswerLetter);
+                  if (answerIdx !== -1 && originalQ.answer_texts[answerIdx] && originalQ.answer_texts[answerIdx].trim() !== '') {
+                    textToCompare = originalQ.answer_texts[answerIdx];
+                  }
+                }
+                isCorrect = selectedAnswerLetter === correctAnswerLetter && 
+                           textToCompare === correctAnswerText;
+              } else {
+                // If no meaningful text, just check letter
+                isCorrect = selectedAnswerLetter === correctAnswerLetter;
+              }
+            }
             
             if (isCorrect) correctCount++;
           }
@@ -357,13 +564,101 @@ export default function HomeworkStart() {
 
       const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
-      // Format student_answers as object with indices as keys
+      // Format student_answers as object with ORIGINAL indices as keys
+      // Convert shuffled indices and answers back to original format
       const studentAnswersObj = {};
-      Object.keys(selectedAnswers).forEach((idx) => {
-        const answerLetter = selectedAnswers[idx];
-        // answerLetter is already a lowercase letter (a, b, c, d)
-        if (answerLetter !== undefined && answerLetter !== null) {
-          studentAnswersObj[idx] = answerLetter;
+      Object.keys(selectedAnswers).forEach((shuffledIdxStr) => {
+        const shuffledIdx = parseInt(shuffledIdxStr, 10);
+        const selectedAnswerData = selectedAnswers[shuffledIdx];
+        
+        if (selectedAnswerData !== undefined && selectedAnswerData !== null) {
+          // Get original question index
+          const originalIdx = shuffleMapping ? shuffledToOriginal[shuffledIdx] : shuffledIdx;
+          const originalQ = fullHomework.questions[originalIdx];
+          const questionItem = questions[shuffledIdx];
+          
+          // Extract answer letter and text
+          let answerLetter = null;
+          let answerText = null;
+          
+          if (typeof selectedAnswerData === 'string') {
+            answerLetter = selectedAnswerData.toLowerCase();
+            // Get the text from the shuffled question at the selected answer index
+            if (questionItem && questionItem.answer_texts && Array.isArray(questionItem.answer_texts)) {
+              const answerIdx = questionItem.answers.findIndex(letter => letter.toLowerCase() === answerLetter);
+              if (answerIdx !== -1 && questionItem.answer_texts[answerIdx]) {
+                answerText = questionItem.answer_texts[answerIdx];
+              }
+            }
+          } else if (typeof selectedAnswerData === 'object' && selectedAnswerData.answer) {
+            answerLetter = selectedAnswerData.answer.toLowerCase();
+            answerText = selectedAnswerData.text || null;
+            // If text not in object, get from shuffled question
+            if (!answerText && questionItem && questionItem.answer_texts && Array.isArray(questionItem.answer_texts)) {
+              const answerIdx = questionItem.answers.findIndex(letter => letter.toLowerCase() === answerLetter);
+              if (answerIdx !== -1 && questionItem.answer_texts[answerIdx]) {
+                answerText = questionItem.answer_texts[answerIdx];
+              }
+            }
+          }
+          
+          // If text was shuffled, map it back to original position
+          if (shuffleMapping && shuffleMapping.textOrder && shuffleMapping.textOrder[shuffledIdx] && answerText && questionItem && questionItem.answer_texts && Array.isArray(questionItem.answer_texts) && originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts)) {
+            const textMapping = shuffleMapping.textOrder[shuffledIdx];
+            if (textMapping && typeof textMapping === 'object' && !Array.isArray(textMapping)) {
+              // Get the index of the selected answer letter in the shuffled view
+              const selectedAnswerIdx = questionItem.answers.findIndex(letter => letter.toLowerCase() === answerLetter);
+              
+              if (selectedAnswerIdx !== -1 && textMapping[selectedAnswerIdx] !== undefined) {
+                // Map back to original text index using the shuffled text index
+                const originalTextIdx = textMapping[selectedAnswerIdx];
+                if (originalTextIdx !== undefined && originalTextIdx !== null && originalQ.answer_texts[originalTextIdx] !== undefined) {
+                  answerText = originalQ.answer_texts[originalTextIdx];
+                }
+              }
+            }
+          }
+          
+          // Store answer in correct format - always store as [letter, text] if original question has answer_texts
+          if (originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts) && originalQ.answer_texts.length > 0) {
+            // If answerText is missing, get it from original question using the mapped index
+            if (!answerText && shuffleMapping && shuffleMapping.textOrder && shuffleMapping.textOrder[shuffledIdx]) {
+              const textMapping = shuffleMapping.textOrder[shuffledIdx];
+              if (textMapping && typeof textMapping === 'object' && !Array.isArray(textMapping)) {
+                const selectedAnswerIdx = questionItem.answers.findIndex(letter => letter.toLowerCase() === answerLetter);
+                if (selectedAnswerIdx !== -1 && textMapping[selectedAnswerIdx] !== undefined) {
+                  const originalTextIdx = textMapping[selectedAnswerIdx];
+                  if (originalTextIdx !== undefined && originalTextIdx !== null && originalQ.answer_texts[originalTextIdx] !== undefined) {
+                    answerText = originalQ.answer_texts[originalTextIdx];
+                  }
+                }
+              }
+            }
+            // Check if answer_texts have actual content (not all empty strings)
+            const hasMeaningfulAnswerTexts = originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts) && 
+              originalQ.answer_texts.length > 0 && 
+              originalQ.answer_texts.some(text => text && text.trim() !== '');
+            
+            // Store answer in correct format - only store as [letter, text] if answer_texts have meaningful content
+            if (hasMeaningfulAnswerTexts) {
+              // If still no answerText, try to get it directly from original question
+              if (!answerText && originalQ.answers && Array.isArray(originalQ.answers)) {
+                const answerIdx = originalQ.answers.findIndex(letter => letter.toLowerCase() === answerLetter);
+                if (answerIdx !== -1 && originalQ.answer_texts[answerIdx] && originalQ.answer_texts[answerIdx].trim() !== '') {
+                  answerText = originalQ.answer_texts[answerIdx];
+                }
+              }
+              // Store as [answer, text] - only if we have meaningful text
+              if (answerText && answerText.trim() !== '') {
+                studentAnswersObj[originalIdx] = [answerLetter, answerText];
+              } else {
+                // If no meaningful text found, store as just letter
+                studentAnswersObj[originalIdx] = answerLetter;
+              }
+            } else {
+              // Store as just answer if no meaningful answer_texts
+              studentAnswersObj[originalIdx] = answerLetter;
+            }
         }
       });
 
@@ -437,15 +732,18 @@ export default function HomeworkStart() {
           data: { percentage, previousPercentage }
         });
         
-        // Get points added from scoring response
-        if (scoringResponse.data && scoringResponse.data.pointsAdded !== undefined) {
+        // Get base points from scoring response (points for current percentage, not net change)
+        if (scoringResponse.data && scoringResponse.data.basePoints !== undefined) {
+          pointsAdded = scoringResponse.data.basePoints;
+        } else if (scoringResponse.data && scoringResponse.data.pointsAdded !== undefined) {
+          // Fallback to pointsAdded if basePoints not available
           pointsAdded = scoringResponse.data.pointsAdded;
         }
       } catch (err) {
         console.error('Error calculating homework score:', err);
       }
 
-      // Save result to database (no questions_order needed - use homework_id to fetch questions)
+      // Save result to database with shuffle mapping if applicable
       // Now pointsAdded is calculated and can be included
       const saveResponse = await apiClient.post(`/api/students/${profile.id}/homework-result`, {
         homework_id: fullHomework._id.toString(),
@@ -455,7 +753,8 @@ export default function HomeworkStart() {
         student_answers: studentAnswersObj,
         date_of_start: startDate,
         date_of_end: endDate,
-        points_added: pointsAdded
+        points_added: pointsAdded,
+        shuffle_mapping: shuffleMapping // Save shuffle mapping for details page
       });
 
       // Verify the result was saved successfully
@@ -708,7 +1007,11 @@ export default function HomeworkStart() {
           }}>
             {currentQuestion.answers.map((answer, aIdx) => {
               // answer is now a letter like "A", "B", "C", "D"
-              const isSelected = selectedAnswers[currentQuestionIndex] === answer.toLowerCase();
+              const selectedAnswerData = selectedAnswers[currentQuestionIndex];
+              const isSelected = selectedAnswerData !== undefined && selectedAnswerData !== null && (
+                (typeof selectedAnswerData === 'string' && selectedAnswerData === answer.toLowerCase()) ||
+                (typeof selectedAnswerData === 'object' && selectedAnswerData.answer === answer.toLowerCase())
+              );
               
               return (
                 <label

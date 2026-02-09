@@ -39,7 +39,7 @@ cloudinary.config({
 });
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB in bytes (original file size)
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     // Validate file type
     if (!fileType || !ALLOWED_MIME_TYPES.includes(fileType)) {
       return res.status(400).json({ 
-        error: 'Invalid file type. Only image formats (JPEG, PNG, GIF, WEBP) are allowed.' 
+        error: 'Invalid file type. Only image formats (JPEG/JPG, PNG, GIF, SVG, WEBP, ICO) are allowed.' 
       });
     }
 

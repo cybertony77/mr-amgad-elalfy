@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       // Create new homework
-      const { lesson_name, timer, questions, week, grade, homework_type, deadline_type, deadline_date, book_name, from_page, to_page } = req.body;
+      const { lesson_name, timer, questions, week, grade, homework_type, deadline_type, deadline_date, book_name, from_page, to_page, shuffle_questions_and_answers } = req.body;
 
       if (!lesson_name || lesson_name.trim() === '') {
         return res.status(400).json({ error: '❌ Lesson name is required' });
@@ -111,7 +111,9 @@ export default async function handler(req, res) {
           if (!q.correct_answer) {
             return res.status(400).json({ error: `❌ Question ${i + 1}: Correct answer is required` });
           }
-          const correctLetterUpper = q.correct_answer.toUpperCase();
+          // Handle both string and array formats for correct_answer
+          const correctAnswerLetter = Array.isArray(q.correct_answer) ? q.correct_answer[0] : q.correct_answer;
+          const correctLetterUpper = correctAnswerLetter.toUpperCase();
           if (!q.answers.includes(correctLetterUpper)) {
             return res.status(400).json({ error: `❌ Question ${i + 1}: Correct answer must be one of the provided answers` });
           }
@@ -151,6 +153,7 @@ export default async function handler(req, res) {
         deadline_type: deadline_type || 'no_deadline',
         deadline_date: deadline_type === 'with_deadline' ? deadline_date : null,
         timer: homework_type === 'questions' && timer !== null && timer !== undefined ? parseInt(timer) : null,
+        shuffle_questions_and_answers: homework_type === 'questions' ? (shuffle_questions_and_answers === true || shuffle_questions_and_answers === 'true') : false,
       };
 
       if (homework_type === 'pages_from_book') {
@@ -158,13 +161,27 @@ export default async function handler(req, res) {
         homework.from_page = parseInt(from_page);
         homework.to_page = parseInt(to_page);
       } else if (homework_type === 'questions') {
-        homework.questions = questions.map(q => ({
-          question_text: q.question_text || '',
-          question_picture: q.question_picture || null,
-          answers: q.answers,
-          answer_texts: q.answer_texts || [],
-          correct_answer: q.correct_answer.toLowerCase()
-        }));
+        homework.questions = questions.map(q => {
+          const hasText = q.answer_texts && q.answer_texts.length > 0 && q.answer_texts.some(text => text && text.trim() !== '');
+          // Handle both string and array formats for correct_answer
+          const correctAnswerLetter = Array.isArray(q.correct_answer) ? q.correct_answer[0] : q.correct_answer;
+          const correctAnswerLetterLower = correctAnswerLetter.toLowerCase();
+          const correctAnswerIdx = q.answers.indexOf(correctAnswerLetterLower.toUpperCase());
+          const correctAnswerText = (correctAnswerIdx !== -1 && q.answer_texts && q.answer_texts[correctAnswerIdx]) 
+            ? q.answer_texts[correctAnswerIdx] 
+            : null;
+          
+          return {
+            question_text: q.question_text || '',
+            question_picture: q.question_picture || null,
+            answers: q.answers,
+            answer_texts: q.answer_texts || [],
+            correct_answer: hasText && correctAnswerText 
+              ? [correctAnswerLetterLower, correctAnswerText]
+              : correctAnswerLetterLower,
+            question_explanation: q.question_explanation || ''
+          };
+        });
       }
 
       const result = await db.collection('homeworks').insertOne(homework);
@@ -179,7 +196,7 @@ export default async function handler(req, res) {
     if (req.method === 'PUT') {
       // Update homework
       const { id } = req.query;
-      const { lesson_name, timer, questions, week, grade, homework_type, deadline_type, deadline_date, book_name, from_page, to_page } = req.body;
+      const { lesson_name, timer, questions, week, grade, homework_type, deadline_type, deadline_date, book_name, from_page, to_page, shuffle_questions_and_answers } = req.body;
 
       if (!id) {
         return res.status(400).json({ error: '❌ Homework ID is required' });
@@ -239,7 +256,9 @@ export default async function handler(req, res) {
           if (!q.correct_answer) {
             return res.status(400).json({ error: `❌ Question ${i + 1}: Correct answer is required` });
           }
-          const correctLetterUpper = q.correct_answer.toUpperCase();
+          // Handle both string and array formats for correct_answer
+          const correctAnswerLetter = Array.isArray(q.correct_answer) ? q.correct_answer[0] : q.correct_answer;
+          const correctLetterUpper = correctAnswerLetter.toUpperCase();
           if (!q.answers.includes(correctLetterUpper)) {
             return res.status(400).json({ error: `❌ Question ${i + 1}: Correct answer must be one of the provided answers` });
           }
@@ -280,6 +299,7 @@ export default async function handler(req, res) {
         deadline_type: deadline_type || 'no_deadline',
         deadline_date: deadline_type === 'with_deadline' ? deadline_date : null,
         timer: homework_type === 'questions' && timer !== null && timer !== undefined ? parseInt(timer) : null,
+        shuffle_questions_and_answers: homework_type === 'questions' ? (shuffle_questions_and_answers === true || shuffle_questions_and_answers === 'true') : false,
       };
 
       if (homework_type === 'pages_from_book') {
@@ -289,13 +309,27 @@ export default async function handler(req, res) {
         // Remove questions field if switching from questions to pages_from_book
         updateData.$unset = { questions: '' };
       } else if (homework_type === 'questions') {
-        updateData.questions = questions.map(q => ({
-          question_text: q.question_text || '',
-          question_picture: q.question_picture || null,
-          answers: q.answers,
-          answer_texts: q.answer_texts || [],
-          correct_answer: q.correct_answer.toLowerCase()
-        }));
+        updateData.questions = questions.map(q => {
+          const hasText = q.answer_texts && q.answer_texts.length > 0 && q.answer_texts.some(text => text && text.trim() !== '');
+          // Handle both string and array formats for correct_answer
+          const correctAnswerLetter = Array.isArray(q.correct_answer) ? q.correct_answer[0] : q.correct_answer;
+          const correctAnswerLetterLower = correctAnswerLetter.toLowerCase();
+          const correctAnswerIdx = q.answers.indexOf(correctAnswerLetterLower.toUpperCase());
+          const correctAnswerText = (correctAnswerIdx !== -1 && q.answer_texts && q.answer_texts[correctAnswerIdx]) 
+            ? q.answer_texts[correctAnswerIdx] 
+            : null;
+          
+          return {
+            question_text: q.question_text || '',
+            question_picture: q.question_picture || null,
+            answers: q.answers,
+            answer_texts: q.answer_texts || [],
+            correct_answer: hasText && correctAnswerText 
+              ? [correctAnswerLetterLower, correctAnswerText]
+              : correctAnswerLetterLower,
+            question_explanation: q.question_explanation || ''
+          };
+        });
         // Remove pages_from_book fields if switching from pages_from_book to questions
         updateData.$unset = { 
           ...(updateData.$unset || {}),

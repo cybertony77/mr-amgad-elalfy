@@ -115,6 +115,7 @@ export default async function handler(req, res) {
           deadline_type: quiz.deadline_type || 'no_deadline',
           deadline_date: quiz.deadline_date || null,
           timer: quiz.timer,
+          shuffle_questions_and_answers: quiz.shuffle_questions_and_answers || false,
           questions: (quiz.questions || []).map(q => ({
             question_text: q.question_text || '',
             question_picture: q.question_picture || null,

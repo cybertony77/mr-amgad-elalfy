@@ -43,14 +43,32 @@ export default function StudentInfo() {
   const [detailsWeeks, setDetailsWeeks] = useState([]);
   const [detailsTitle, setDetailsTitle] = useState('');
 
-  // Check authentication status
+  // Check authentication status and user role
   useEffect(() => {
     const checkAuth = async () => {
       const isAuthenticated = await hasToken();
       setHasAuthToken(isAuthenticated);
+      
+      // If authenticated, check if user is a student and redirect to my_info
+      if (isAuthenticated) {
+        try {
+          const response = await fetch('/api/auth/me', {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const userData = await response.json();
+            // If user is a student and on public student_info page, redirect to my_info
+            if (userData.role === 'student' && router.pathname === '/dashboard/student_info') {
+              router.push('/student_dashboard/my_info');
+            }
+          }
+        } catch (error) {
+          // Ignore errors
+        }
+      }
     };
     checkAuth();
-  }, []);
+  }, [router]);
 
   // Handle URL parameters and HMAC verification
   useEffect(() => {
@@ -411,10 +429,10 @@ export default function StudentInfo() {
 
   // Helper function to get attendance status for a week
   const getWeekAttendance = (weekNumber) => {
-    if (!currentStudent || !currentStudent.weeks) return { attended: false, hwDone: false, hwDegree: null, quizDegree: null, message_state: false, lastAttendance: null };
+    if (!currentStudent || !currentStudent.weeks) return { attended: false, hwDone: false, hwDegree: null, quizDegree: null, message_state: false, lastAttendance: null, view_homework_video: false };
     
     const weekData = currentStudent.weeks.find(w => w.week === weekNumber);
-    if (!weekData) return { attended: false, hwDone: false, hwDegree: null, quizDegree: null, message_state: false, lastAttendance: null };
+    if (!weekData) return { attended: false, hwDone: false, hwDegree: null, quizDegree: null, message_state: false, lastAttendance: null, view_homework_video: false };
     
     return {
       attended: weekData.attended || false,
@@ -423,7 +441,8 @@ export default function StudentInfo() {
       quizDegree: weekData.quizDegree || null,
       comment: weekData.comment || null,
       message_state: weekData.message_state || false,
-      lastAttendance: weekData.lastAttendance || null
+      lastAttendance: weekData.lastAttendance || null,
+      view_homework_video: weekData.view_homework_video || false
     };
   };
 
@@ -1050,13 +1069,13 @@ export default function StudentInfo() {
               </div>
             ) : (
               <ScrollArea h="calc(30rem * var(--mantine-scale))" type="hover" className={styles.scrolled}>
-                <Table striped highlightOnHover withTableBorder withColumnBorders style={{ minWidth: '950px' }}>
+                <Table striped highlightOnHover withTableBorder withColumnBorders style={{ minWidth: '1090px' }}>
                   <Table.Thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 10 }}>
                     <Table.Tr>
                       <Table.Th style={{ width: '120px', minWidth: '120px', textAlign: 'center' }}>Week</Table.Th>
                       <Table.Th style={{ width: '120px', minWidth: '120px', textAlign: 'center' }}>Attendance Info</Table.Th>
                       <Table.Th style={{ width: '120px', minWidth: '120px', textAlign: 'center' }}>Homework</Table.Th>
-                      
+                      <Table.Th style={{ width: '140px', minWidth: '140px', textAlign: 'center' }}>Homework Video</Table.Th>
                       <Table.Th style={{ width: '120px', minWidth: '120px', textAlign: 'center' }}>Quiz Degree</Table.Th>
                       <Table.Th style={{ width: '200px', minWidth: '200px', textAlign: 'center' }}>Comment</Table.Th>
                       <Table.Th style={{ width: '130px', minWidth: '130px', textAlign: 'center' }}>Message Status</Table.Th>
@@ -1119,7 +1138,21 @@ export default function StudentInfo() {
                               }
                             })()}
                           </Table.Td>
-                          
+                          <Table.Td style={{ width: '140px', minWidth: '140px', textAlign: 'center' }}>
+                            {weekData.view_homework_video === true ? (
+                              <span style={{ 
+                                color: '#28a745',
+                                fontWeight: 'bold',
+                                fontSize: '1rem'
+                              }}>✅ Viewed</span>
+                            ) : (
+                              <span style={{ 
+                                color: '#dc3545',
+                                fontWeight: 'bold',
+                                fontSize: '1rem'
+                              }}>❌ Not Viewed</span>
+                            )}
+                          </Table.Td>
                           <Table.Td style={{ width: '120px', minWidth: '120px', textAlign: 'center' }}>
                             {(() => {
                               const value = weekData.quizDegree !== null && weekData.quizDegree !== undefined && weekData.quizDegree !== '' ? weekData.quizDegree : '0/0';

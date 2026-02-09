@@ -778,9 +778,9 @@ export default function ManageDefaults() {
                         ) : (
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>
-                              {((condition.type === 'homework' && condition.withDegree === true) || condition.type === 'quiz') ? (
+                              {((formData.type === 'homework' && formData.withDegree === true) || formData.type === 'quiz') ? (
                                 <>{bonus.condition.lastN} constant weeks with degree {bonus.condition.percentage || 100}% → +{bonus.points} pts</>
-                              ) : condition.type === 'homework' && condition.withDegree === false ? (
+                              ) : formData.type === 'homework' && formData.withDegree === false ? (
                                 <>{bonus.condition.lastN} consecutive {bonus.condition.hwDone === true ? 'Done' : bonus.condition.hwDone === false ? 'Not Done' : bonus.condition.hwDone === 'Not Completed' ? 'Not Completed' : String(bonus.condition.hwDone)} → +{bonus.points} pts</>
                               ) : (
                                 <>{bonus.condition.lastN} consecutive {bonus.condition.percentage || 100}% → +{bonus.points} pts</>

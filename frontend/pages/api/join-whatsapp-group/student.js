@@ -65,9 +65,15 @@ export default async function handler(req, res) {
     const allGroups = await db.collection('join_whatsapp_group').find({}).toArray();
 
     // Filter groups that match the student (case-insensitive comparison)
+    // If center exists in group, it must match student's center; if not, only match by grade and gender
     const matchingGroups = allGroups.filter(group => {
       const gradeMatch = (group.grade || '').toLowerCase().trim() === (student.grade || '').toLowerCase().trim();
-      const centerMatch = (group.center || '').toLowerCase().trim() === (student.main_center || '').toLowerCase().trim();
+      const groupCenter = (group.center || '').trim();
+      const studentCenter = (student.main_center || '').trim();
+      
+      // If group has a center, it must match student's center
+      // If group has no center (empty), it matches any student
+      const centerMatch = groupCenter === '' || groupCenter.toLowerCase() === studentCenter.toLowerCase();
       const genderMatch = group.gender === 'Both' || (group.gender || '').toLowerCase().trim() === (student.gender || '').toLowerCase().trim();
 
       return gradeMatch && centerMatch && genderMatch;
