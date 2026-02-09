@@ -619,8 +619,13 @@ export default function HomeworkStart() {
             }
           }
           
-          // Store answer in correct format - always store as [letter, text] if original question has answer_texts
-          if (originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts) && originalQ.answer_texts.length > 0) {
+          // Check if answer_texts have actual content (not all empty strings)
+          const hasMeaningfulAnswerTexts = originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts) && 
+            originalQ.answer_texts.length > 0 && 
+            originalQ.answer_texts.some(text => text && text.trim() !== '');
+          
+          // Store answer in correct format - only store as [letter, text] if answer_texts have meaningful content
+          if (hasMeaningfulAnswerTexts) {
             // If answerText is missing, get it from original question using the mapped index
             if (!answerText && shuffleMapping && shuffleMapping.textOrder && shuffleMapping.textOrder[shuffledIdx]) {
               const textMapping = shuffleMapping.textOrder[shuffledIdx];
@@ -634,31 +639,24 @@ export default function HomeworkStart() {
                 }
               }
             }
-            // Check if answer_texts have actual content (not all empty strings)
-            const hasMeaningfulAnswerTexts = originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts) && 
-              originalQ.answer_texts.length > 0 && 
-              originalQ.answer_texts.some(text => text && text.trim() !== '');
-            
-            // Store answer in correct format - only store as [letter, text] if answer_texts have meaningful content
-            if (hasMeaningfulAnswerTexts) {
-              // If still no answerText, try to get it directly from original question
-              if (!answerText && originalQ.answers && Array.isArray(originalQ.answers)) {
-                const answerIdx = originalQ.answers.findIndex(letter => letter.toLowerCase() === answerLetter);
-                if (answerIdx !== -1 && originalQ.answer_texts[answerIdx] && originalQ.answer_texts[answerIdx].trim() !== '') {
-                  answerText = originalQ.answer_texts[answerIdx];
-                }
+            // If still no answerText, try to get it directly from original question
+            if (!answerText && originalQ.answers && Array.isArray(originalQ.answers)) {
+              const answerIdx = originalQ.answers.findIndex(letter => letter.toLowerCase() === answerLetter);
+              if (answerIdx !== -1 && originalQ.answer_texts[answerIdx] && originalQ.answer_texts[answerIdx].trim() !== '') {
+                answerText = originalQ.answer_texts[answerIdx];
               }
-              // Store as [answer, text] - only if we have meaningful text
-              if (answerText && answerText.trim() !== '') {
-                studentAnswersObj[originalIdx] = [answerLetter, answerText];
-              } else {
-                // If no meaningful text found, store as just letter
-                studentAnswersObj[originalIdx] = answerLetter;
-              }
+            }
+            // Store as [answer, text] - only if we have meaningful text
+            if (answerText && answerText.trim() !== '') {
+              studentAnswersObj[originalIdx] = [answerLetter, answerText];
             } else {
-              // Store as just answer if no meaningful answer_texts
+              // If no meaningful text found, store as just letter
               studentAnswersObj[originalIdx] = answerLetter;
             }
+          } else {
+            // Store as just answer if no meaningful answer_texts
+            studentAnswersObj[originalIdx] = answerLetter;
+          }
         }
       });
 
