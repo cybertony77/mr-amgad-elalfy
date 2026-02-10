@@ -70,6 +70,11 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Homework not found' });
     }
 
+    // Check if show_details_after_submitting is enabled
+    if (homework.show_details_after_submitting !== true && homework.show_details_after_submitting !== 'true') {
+      return res.status(403).json({ error: 'Details are not available for this homework. The teacher has disabled showing details after submitting.' });
+    }
+
     // Find result that matches this homework_id
     // Normalize both to strings for comparison (handles ObjectId vs string mismatch)
     const onlineHomeworks = student.online_homeworks || [];

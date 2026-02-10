@@ -36,6 +36,7 @@ export default function EditHomework() {
     timer_type: 'no_timer',
     timer: null,
     shuffle_questions_and_answers: false,
+    show_details_after_submitting: false,
     questions: [{
       question_text: '',
       question_picture: null,
@@ -138,6 +139,7 @@ export default function EditHomework() {
         timer_type: homeworkData.timer === null || homeworkData.timer === undefined ? 'no_timer' : 'with_timer',
         timer: homeworkData.timer || null,
         shuffle_questions_and_answers: homeworkData.shuffle_questions_and_answers === true || homeworkData.shuffle_questions_and_answers === 'true' ? true : false,
+        show_details_after_submitting: homeworkData.show_details_after_submitting === true || homeworkData.show_details_after_submitting === 'true' ? true : false,
         questions: homeworkType === 'questions' && homeworkData.questions && Array.isArray(homeworkData.questions)
           ? homeworkData.questions.map(q => ({
               question_text: q.question_text || '',
@@ -619,6 +621,11 @@ export default function EditHomework() {
       newErrors.shuffle_questions_and_answers = '❌ Shuffle Questions and Answers is required';
     }
 
+    // Validate show_details_after_submitting is required
+    if (formData.show_details_after_submitting === undefined || formData.show_details_after_submitting === null) {
+      newErrors.show_details_after_submitting = '❌ Show details after submitting is required';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -667,6 +674,7 @@ export default function EditHomework() {
       homework_type: formData.homework_type,
       timer: formData.homework_type === 'questions' && formData.timer_type === 'with_timer' ? parseInt(formData.timer) : null,
       shuffle_questions_and_answers: formData.homework_type === 'questions' ? formData.shuffle_questions_and_answers : false,
+      show_details_after_submitting: formData.homework_type === 'questions' ? formData.show_details_after_submitting : false,
     };
 
     if (formData.homework_type === 'pages_from_book') {
@@ -1168,6 +1176,37 @@ export default function EditHomework() {
                     </label>
                   </div>
                 </div>
+
+                {/* Show details after submitting Radio */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', textAlign: 'left' }}>
+                    Show details after submitting <span style={{ color: 'red' }}>*</span>
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', border: formData.show_details_after_submitting === false ? '2px solid #1FA8DC' : '2px solid #e9ecef', backgroundColor: formData.show_details_after_submitting === false ? '#f0f8ff' : 'white' }}>
+                      <input
+                        type="radio"
+                        name="show_details_after_submitting"
+                        value="false"
+                        checked={formData.show_details_after_submitting === false}
+                        onChange={(e) => setFormData({ ...formData, show_details_after_submitting: false })}
+                        style={{ marginRight: '10px', width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontWeight: '500' }}>No</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', border: formData.show_details_after_submitting === true ? '2px solid #1FA8DC' : '2px solid #e9ecef', backgroundColor: formData.show_details_after_submitting === true ? '#f0f8ff' : 'white' }}>
+                      <input
+                        type="radio"
+                        name="show_details_after_submitting"
+                        value="true"
+                        checked={formData.show_details_after_submitting === true}
+                        onChange={(e) => setFormData({ ...formData, show_details_after_submitting: true })}
+                        style={{ marginRight: '10px', width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontWeight: '500' }}>Yes</span>
+                    </label>
+                  </div>
+                </div>
               </>
             )}
 
@@ -1452,59 +1491,61 @@ export default function EditHomework() {
                       const answerText = question.answer_texts && question.answer_texts[aIdx] ? question.answer_texts[aIdx] : '';
                       
                       return (
-                        <div key={aIdx} className="answer-option-row" style={{ 
-                          display: 'flex', 
-                          gap: '12px', 
-                          alignItems: 'center',
-                          padding: '12px',
-                          border: '2px solid #e9ecef',
-                          borderRadius: '8px',
-                          backgroundColor: '#f8f9fa'
-                        }}>
-                          <div style={{ 
-                            minWidth: '32px',
-                            height: '32px',
-                            display: 'flex',
+                        <div key={aIdx} style={{ marginBottom: '12px' }}>
+                          <div className="answer-option-row" style={{ 
+                            display: 'flex', 
+                            gap: '12px', 
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: '#1FA8DC',
-                            color: 'white',
-                            borderRadius: '6px',
-                            fontSize: '1rem',
-                            fontWeight: '700'
+                            padding: '12px',
+                            border: '2px solid #e9ecef',
+                            borderRadius: '8px',
+                            backgroundColor: '#f8f9fa'
                           }}>
-                            {answerLetter}
+                            <div style={{ 
+                              minWidth: '32px',
+                              height: '32px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: '#1FA8DC',
+                              color: 'white',
+                              borderRadius: '6px',
+                              fontSize: '1rem',
+                              fontWeight: '700'
+                            }}>
+                              {answerLetter}
+                            </div>
+                            
+                            <input
+                              type="text"
+                              value={answerText}
+                              onChange={(e) => {
+                                const newAnswerTexts = [...(question.answer_texts || [])];
+                                newAnswerTexts[aIdx] = e.target.value;
+                                handleQuestionChange(qIdx, 'answer_texts', newAnswerTexts);
+                                
+                                // Sync correct_answer if this is the correct answer
+                                const currentCorrectAnswer = question.correct_answer;
+                                if (Array.isArray(currentCorrectAnswer) && currentCorrectAnswer[0] === answerLetter.toLowerCase()) {
+                                  // Update the text part
+                                  handleQuestionChange(qIdx, 'correct_answer', [answerLetter.toLowerCase(), e.target.value]);
+                                } else if (currentCorrectAnswer === answerLetter.toLowerCase() && e.target.value.trim() !== '') {
+                                  // Convert to array format if text is added
+                                  handleQuestionChange(qIdx, 'correct_answer', [answerLetter.toLowerCase(), e.target.value]);
+                                }
+                              }}
+                              placeholder={`Option ${answerLetter} text (optional)`}
+                              style={{
+                                flex: 1,
+                                padding: '10px 12px',
+                                border: '2px solid #e9ecef',
+                                borderRadius: '8px',
+                                fontSize: '0.95rem'
+                              }}
+                            />
                           </div>
                           
-                          <input
-                            type="text"
-                            value={answerText}
-                            onChange={(e) => {
-                              const newAnswerTexts = [...(question.answer_texts || [])];
-                              newAnswerTexts[aIdx] = e.target.value;
-                              handleQuestionChange(qIdx, 'answer_texts', newAnswerTexts);
-                              
-                              // Sync correct_answer if this is the correct answer
-                              const currentCorrectAnswer = question.correct_answer;
-                              if (Array.isArray(currentCorrectAnswer) && currentCorrectAnswer[0] === answerLetter.toLowerCase()) {
-                                // Update the text part
-                                handleQuestionChange(qIdx, 'correct_answer', [answerLetter.toLowerCase(), e.target.value]);
-                              } else if (currentCorrectAnswer === answerLetter.toLowerCase() && e.target.value.trim() !== '') {
-                                // Convert to array format if text is added
-                                handleQuestionChange(qIdx, 'correct_answer', [answerLetter.toLowerCase(), e.target.value]);
-                              }
-                            }}
-                            placeholder={`Option ${answerLetter} text (optional)`}
-                            style={{
-                              flex: 1,
-                              padding: '10px 12px',
-                              border: '2px solid #e9ecef',
-                              borderRadius: '8px',
-                              fontSize: '0.95rem'
-                            }}
-                          />
-                          
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <div className="answer-buttons-container" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', width: '100%', marginTop: '8px' }}>
                             {hasTrashButton && (
                               <button
                                 type="button"
@@ -1743,6 +1784,35 @@ export default function EditHomework() {
           }
           .form-container {
             padding: 16px !important;
+          }
+          .answer-buttons-container {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            margin-top: 8px !important;
+          }
+          .answer-buttons-container button {
+            flex: 1 1 calc(50% - 4px) !important;
+            min-width: calc(50% - 4px) !important;
+            max-width: calc(50% - 4px) !important;
+          }
+          .add-question-container {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            justify-content: flex-end !important;
+          }
+          .add-question-container button {
+            flex: 1 1 calc(50% - 4px) !important;
+            min-width: calc(50% - 4px) !important;
+            max-width: calc(50% - 4px) !important;
+          }
+          .question-section > div:first-child {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+          }
+          .question-section > div:first-child button {
+            width: 100% !important;
+            flex: 1 1 100% !important;
           }
           .submit-buttons {
             flex-direction: column;

@@ -70,6 +70,11 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Quiz not found' });
     }
 
+    // Check if show_details_after_submitting is enabled
+    if (quiz.show_details_after_submitting !== true && quiz.show_details_after_submitting !== 'true') {
+      return res.status(403).json({ error: 'Details are not available for this quiz. The teacher has disabled showing details after submitting.' });
+    }
+
     // Find result that matches this quiz_id
     // Normalize both to strings for comparison (handles ObjectId vs string mismatch)
     const onlineQuizzes = student.online_quizzes || [];

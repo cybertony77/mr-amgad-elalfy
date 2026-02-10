@@ -694,12 +694,6 @@ export default function MyInfo() {
                   <div className="detail-value">{student.age}</div>
                 </div>
               )}
-              {student.gender && (
-                <div className="detail-item">
-                  <div className="detail-label">Gender</div>
-                  <div className="detail-value">{student.gender}</div>
-                </div>
-              )}
               <div className="detail-item">
                 <div className="detail-label">Grade</div>
                 <div className="detail-value">{student.grade}</div>

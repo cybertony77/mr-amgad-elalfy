@@ -796,36 +796,48 @@ export default function MyQuizzes() {
                     <div style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px' }}>
                       {[quiz.week !== undefined && quiz.week !== null ? `Week ${quiz.week}` : null, quiz.lesson_name].filter(Boolean).join(' • ')}
                     </div>
-                    <div style={{ color: '#6c757d', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span>{quiz.questions?.length || 0} Question{quiz.questions?.length !== 1 ? 's' : ''}</span>
-                      <span>•</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Image src="/clock.svg" alt="Timer" width={18} height={18} />
-                        {quiz.timer ? `Timer ${quiz.timer} minute${quiz.timer !== 1 ? 's' : ''}` : 'No Timer'}
-                      </span>
-                      {quiz.deadline_type === 'with_deadline' && quiz.deadline_date && (
-                        <>
-                          <span>•</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Image src="/clock.svg" alt="Deadline" width={18} height={18} />
-                            {quiz.deadline_date ? (() => {
-                              try {
-                                // Parse date in local timezone
-                                let deadline;
-                                if (typeof quiz.deadline_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(quiz.deadline_date)) {
-                                  const [year, month, day] = quiz.deadline_date.split('-').map(Number);
-                                  deadline = new Date(year, month - 1, day);
-                                } else {
-                                  deadline = new Date(quiz.deadline_date);
+                    <div style={{
+                      padding: '12px 16px',
+                      backgroundColor: '#ffffff',
+                      border: '2px solid #e9ecef',
+                      borderRadius: '8px',
+                      fontSize: '0.95rem',
+                      color: '#495057',
+                      textAlign: 'left',
+                      display: 'inline-block',
+                      maxWidth: '350px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span>{quiz.questions?.length || 0} Question{quiz.questions?.length !== 1 ? 's' : ''}</span>
+                        <span>•</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Image src="/clock.svg" alt="Timer" width={18} height={18} />
+                          {quiz.timer ? `Timer ${quiz.timer} minute${quiz.timer !== 1 ? 's' : ''}` : 'No Timer'}
+                        </span>
+                        {quiz.deadline_type === 'with_deadline' && quiz.deadline_date && (
+                          <>
+                            <span>•</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Image src="/clock.svg" alt="Deadline" width={18} height={18} />
+                              {quiz.deadline_date ? (() => {
+                                try {
+                                  // Parse date in local timezone
+                                  let deadline;
+                                  if (typeof quiz.deadline_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(quiz.deadline_date)) {
+                                    const [year, month, day] = quiz.deadline_date.split('-').map(Number);
+                                    deadline = new Date(year, month - 1, day);
+                                  } else {
+                                    deadline = new Date(quiz.deadline_date);
+                                  }
+                                  return `With deadline date : ${deadline.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`;
+                                } catch (e) {
+                                  return `With deadline date : ${quiz.deadline_date}`;
                                 }
-                                return `With deadline date : ${deadline.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`;
-                              } catch (e) {
-                                return `With deadline date : ${quiz.deadline_date}`;
-                              }
-                            })() : 'With no deadline date'}
-                          </span>
-                        </>
-                      )}
+                              })() : 'With no deadline date'}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="quiz-buttons" style={{ display: 'flex', gap: '12px' }}>
@@ -839,34 +851,36 @@ export default function MyQuizzes() {
                       if (completedQuizzes.has(quiz._id)) {
                         return (
                           <>
-                            <button
-                              onClick={() => router.push(`/student_dashboard/my_quizzes/details?id=${quiz._id}`)}
-                              style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#1FA8DC',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                fontWeight: '600',
-                                transition: 'all 0.2s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = '#0d5a7a';
-                                e.target.style.transform = 'translateY(-1px)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = '#1FA8DC';
-                                e.target.style.transform = 'translateY(0)';
-                              }}
-                            >
-                              <Image src="/details.svg" alt="Details" width={18} height={18} />
-                              Details
-                            </button>
+                            {(quiz.show_details_after_submitting === true || quiz.show_details_after_submitting === 'true') && (
+                              <button
+                                onClick={() => router.push(`/student_dashboard/my_quizzes/details?id=${quiz._id}`)}
+                                style={{
+                                  padding: '8px 16px',
+                                  backgroundColor: '#1FA8DC',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  fontSize: '0.9rem',
+                                  fontWeight: '600',
+                                  transition: 'all 0.2s ease',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.backgroundColor = '#0d5a7a';
+                                  e.target.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.backgroundColor = '#1FA8DC';
+                                  e.target.style.transform = 'translateY(0)';
+                                }}
+                              >
+                                <Image src="/details.svg" alt="Details" width={18} height={18} />
+                                Details
+                              </button>
+                            )}
                             <button
                               style={{
                                 padding: '8px 16px',

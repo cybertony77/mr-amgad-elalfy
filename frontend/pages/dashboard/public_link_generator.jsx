@@ -699,7 +699,7 @@ export default function GenerateLink() {
                     borderBottom: "2px solid #1FA8DC",
                     backgroundColor: "#f8f9fa"
                   }}>
-                    Send to Parent 1
+                    Send to Parent
                   </th>
                 </tr>
               </thead>

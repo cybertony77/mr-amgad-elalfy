@@ -443,62 +443,88 @@ export default function Homeworks() {
                     </div>
                     <div style={{ color: '#6c757d', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       {homework.homework_type === 'pages_from_book' ? (
-                        <span>From page {homework.from_page} to page {homework.to_page} in {homework.book_name} book</span>
+                        <div style={{
+                          padding: '12px 16px',
+                          backgroundColor: '#ffffff',
+                          border: '2px solid #e9ecef',
+                          borderRadius: '8px',
+                          fontSize: '0.95rem',
+                          color: '#495057',
+                          textAlign: 'left',
+                          display: 'inline-block',
+                          maxWidth: '350px'
+                        }}>
+                          <strong>From page {homework.from_page} to page {homework.to_page} in {homework.book_name}</strong>
+                        </div>
                       ) : (
-                        <>
-                          <span>{homework.questions?.length || 0} Question{homework.questions?.length !== 1 ? 's' : ''}</span>
-                          <span>•</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Image src="/clock.svg" alt="Timer" width={18} height={18} />
-                            {homework.timer ? `Timer ${homework.timer} minute${homework.timer !== 1 ? 's' : ''}` : 'No Timer'}
-                          </span>
-                          <span>•</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Image src="/clock.svg" alt="Deadline" width={18} height={18} />
-                            {homework.deadline_type === 'with_deadline' && homework.deadline_date
-                              ? (() => {
-                                  try {
-                                    // Parse date in local timezone to avoid timezone shift
-                                    let deadline;
-                                    if (typeof homework.deadline_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(homework.deadline_date)) {
-                                      const [year, month, day] = homework.deadline_date.split('-').map(Number);
-                                      deadline = new Date(year, month - 1, day);
-                                    } else {
-                                      deadline = new Date(homework.deadline_date);
+                        <div style={{
+                          padding: '12px 16px',
+                          backgroundColor: '#ffffff',
+                          border: '2px solid #e9ecef',
+                          borderRadius: '8px',
+                          fontSize: '0.95rem',
+                          color: '#495057',
+                          textAlign: 'left',
+                          display: 'inline-block',
+                          maxWidth: '350px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span>{homework.questions?.length || 0} Question{homework.questions?.length !== 1 ? 's' : ''}</span>
+                            <span>•</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Image src="/clock.svg" alt="Timer" width={18} height={18} />
+                              {homework.timer ? `Timer ${homework.timer} minute${homework.timer !== 1 ? 's' : ''}` : 'No Timer'}
+                            </span>
+                            <span>•</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Image src="/clock.svg" alt="Deadline" width={18} height={18} />
+                              {homework.deadline_type === 'with_deadline' && homework.deadline_date
+                                ? (() => {
+                                    try {
+                                      // Parse date in local timezone to avoid timezone shift
+                                      let deadline;
+                                      if (typeof homework.deadline_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(homework.deadline_date)) {
+                                        const [year, month, day] = homework.deadline_date.split('-').map(Number);
+                                        deadline = new Date(year, month - 1, day);
+                                      } else {
+                                        deadline = new Date(homework.deadline_date);
+                                      }
+                                      return `With deadline date : ${deadline.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`;
+                                    } catch (e) {
+                                      return `With deadline date : ${homework.deadline_date}`;
                                     }
-                                    return `With deadline date : ${deadline.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`;
-                                  } catch (e) {
-                                    return `With deadline date : ${homework.deadline_date}`;
-                                  }
-                                })()
-                              : 'With no deadline date'}
-                          </span>
-                        </>
+                                  })()
+                                : 'With no deadline date'}
+                            </span>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
                   <div className="homework-buttons" style={{ display: 'flex', gap: '12px' }}>
-                    <button
-                      onClick={() => openAnalytics(homework)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#1FA8DC',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <Image src="/chart2.svg" alt="Analytics" width={18} height={18} style={{ display: 'inline-block' }} />
-                      Analytics
-                    </button>
+                    {homework.homework_type !== 'pages_from_book' && (
+                      <button
+                        onClick={() => openAnalytics(homework)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#1FA8DC',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: '600',
+                          transition: 'all 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Image src="/chart2.svg" alt="Analytics" width={18} height={18} style={{ display: 'inline-block' }} />
+                        Analytics
+                      </button>
+                    )}
                     <button
                       onClick={() => router.push(`/dashboard/manage_online_system/homeworks/edit?id=${homework._id}`)}
                       style={{

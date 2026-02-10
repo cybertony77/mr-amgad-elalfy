@@ -5,7 +5,7 @@ import Title from "../../components/Title";
 import RoleSelect from "../../components/RoleSelect";
 import AccountStateSelect from "../../components/AccountStateSelect";
 import AddToContactAssistants from "../../components/AddToContactAssistants";
-import { useAssistant, useAssistants, useUpdateAssistant } from '../../lib/api/assistants';
+import { useAssistant, useAssistants, useUpdateAssistant, useCheckUsername } from '../../lib/api/assistants';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { formatPhoneForDB, validateEgyptPhone, handleEgyptPhoneKeyDown } from '../../lib/phoneUtils';
@@ -29,6 +29,7 @@ export default function EditAssistant() {
   const { data: assistant, isLoading: assistantLoading, error: assistantError } = useAssistant(searchId, { enabled: !!searchId });
   const { data: allAssistants } = useAssistants(); // Get all assistants for name search
   const updateAssistantMutation = useUpdateAssistant();
+  const usernameCheck = useCheckUsername(form.id);
 
   useEffect(() => {
     // Only allow admin
@@ -159,7 +160,14 @@ export default function EditAssistant() {
   };
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    // For id (username) field only, remove all spaces
+    if (name === 'id') {
+      const trimmedValue = value.replace(/\s/g, ''); // Remove all spaces
+      setForm({ ...form, [name]: trimmedValue });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   // Helper function to get only changed fields
@@ -496,6 +504,32 @@ export default function EditAssistant() {
             font-weight: 600;
             box-shadow: 0 4px 16px rgba(108, 117, 125, 0.3);
           }
+          .username-feedback {
+            margin-top: 8px;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+          }
+          .username-feedback.checking {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+          }
+          .username-feedback.taken {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+          }
+          .username-feedback.available {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+          }
+          .error-border {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
+          }
         `}</style>
                  <Title 
                    backText="Back" 
@@ -608,12 +642,38 @@ export default function EditAssistant() {
               <div className="form-group">
                 <label>Username</label>
                 <input
-                  className="form-input"
+                  className={`form-input ${!usernameCheck.isLoading && usernameCheck.data && usernameCheck.data.exists && form.id !== originalForm?.id ? 'error-border' : ''}`}
                   name="id"
                   placeholder="Edit assistant username"
                   value={form.id}
                   onChange={handleChange}
+                  onKeyDown={(e) => {
+                    // Prevent space key from being entered
+                    if (e.key === ' ') {
+                      e.preventDefault();
+                    }
+                  }}
                 />
+                {/* Username availability feedback */}
+                {form.id && form.id !== originalForm?.id && (
+                  <div>
+                    {usernameCheck.isLoading && (
+                      <div className="username-feedback checking">
+                        🔍 Checking availability...
+                      </div>
+                    )}
+                    {!usernameCheck.isLoading && usernameCheck.data && usernameCheck.data.exists && (
+                      <div className="username-feedback taken">
+                        ❌ This username is already taken, use anther one
+                      </div>
+                    )}
+                    {!usernameCheck.isLoading && usernameCheck.data && !usernameCheck.data.exists && (
+                      <div className="username-feedback available">
+                        ✅ This username is available
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label>Name</label>

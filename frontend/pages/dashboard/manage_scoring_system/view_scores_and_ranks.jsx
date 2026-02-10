@@ -217,7 +217,7 @@ export default function ViewScores() {
           <Title backText="Back" href="/dashboard/manage_scoring_system">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Image src="/stars.svg" alt="View Scores" width={32} height={32} />
-              View Scores
+              View Scores and Ranks
             </div>
           </Title>
           <LoadingSkeleton type="table" rows={8} columns={8} />
@@ -244,7 +244,7 @@ export default function ViewScores() {
         <Title backText="Back" href="/dashboard/manage_scoring_system">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Image src="/stars.svg" alt="View Scores" width={32} height={32} />
-            View Scores
+            View Scores and Ranks
           </div>
         </Title>
 

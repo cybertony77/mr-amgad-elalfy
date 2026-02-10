@@ -1068,6 +1068,7 @@ export default function VerificationVideoCodes() {
                     onChange={(value) => setFormData({ ...formData, code_state: value })}
                     placeholder="Select Code State"
                     required={true}
+                    label="Code State"
                   />
                   {errors.code_state && (
                     <div style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '4px' }}>
@@ -1236,6 +1237,7 @@ export default function VerificationVideoCodes() {
                     onChange={(value) => setFormData({ ...formData, code_state: value })}
                     placeholder="Select Code State"
                     required={true}
+                    label="Code State"
                   />
                   {errors.code_state && (
                     <div style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '4px' }}>
@@ -1552,7 +1554,6 @@ export default function VerificationVideoCodes() {
             }
             .search-bar-container :global(input) {
               font-size: 0.85rem !important;
-              padding: 10px 14px !important;
             }
             .search-bar-container :global(button) {
               width: 36px !important;

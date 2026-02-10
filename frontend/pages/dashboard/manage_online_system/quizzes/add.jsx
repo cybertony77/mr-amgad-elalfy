@@ -25,6 +25,7 @@ export default function AddQuiz() {
     timer_type: 'no_timer',
     timer: null,
     shuffle_questions_and_answers: false,
+    show_details_after_submitting: false,
     questions: [{
       question_text: '',
       question_picture: null,
@@ -452,6 +453,11 @@ export default function AddQuiz() {
       newErrors.shuffle_questions_and_answers = '❌ Shuffle Questions and Answers is required';
     }
 
+    // Validate show_details_after_submitting is required
+    if (formData.show_details_after_submitting === undefined || formData.show_details_after_submitting === null) {
+      newErrors.show_details_after_submitting = '❌ Show details after submitting is required';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -497,6 +503,7 @@ export default function AddQuiz() {
       deadline_date: formData.deadline_type === 'with_deadline' ? formData.deadline_date : null,
       timer: formData.timer_type === 'with_timer' ? parseInt(formData.timer) : null,
       shuffle_questions_and_answers: formData.shuffle_questions_and_answers,
+      show_details_after_submitting: formData.show_details_after_submitting,
     };
 
     if (formData.questions && Array.isArray(formData.questions)) {
@@ -775,6 +782,37 @@ export default function AddQuiz() {
               </div>
             </div>
 
+                {/* Show details after submitting Radio */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', textAlign: 'left' }}>
+                    Show details after submitting <span style={{ color: 'red' }}>*</span>
+                  </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', border: formData.show_details_after_submitting === false ? '2px solid #1FA8DC' : '2px solid #e9ecef', backgroundColor: formData.show_details_after_submitting === false ? '#f0f8ff' : 'white' }}>
+                  <input
+                    type="radio"
+                    name="show_details_after_submitting"
+                    value="false"
+                    checked={formData.show_details_after_submitting === false}
+                    onChange={(e) => setFormData({ ...formData, show_details_after_submitting: false })}
+                    style={{ marginRight: '10px', width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: '500' }}>No</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', border: formData.show_details_after_submitting === true ? '2px solid #1FA8DC' : '2px solid #e9ecef', backgroundColor: formData.show_details_after_submitting === true ? '#f0f8ff' : 'white' }}>
+                  <input
+                    type="radio"
+                    name="show_details_after_submitting"
+                    value="true"
+                    checked={formData.show_details_after_submitting === true}
+                    onChange={(e) => setFormData({ ...formData, show_details_after_submitting: true })}
+                    style={{ marginRight: '10px', width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: '500' }}>Yes</span>
+                </label>
+              </div>
+            </div>
+
                 {/* Questions */}
                 {formData.questions && Array.isArray(formData.questions) && formData.questions.map((question, qIdx) => (
               <div key={qIdx} className="question-section" style={{ marginBottom: '32px', padding: '20px', border: '2px solid #e9ecef', borderRadius: '12px' }}>
@@ -1037,49 +1075,51 @@ export default function AddQuiz() {
                       const showAddButton = isLastAnswer && (aIdx === 1 || hasTrashButton);
                       
                       return (
-                        <div key={aIdx} className="answer-option-row" style={{ 
-                          display: 'flex', 
-                          gap: '12px', 
-                          alignItems: 'center',
-                          padding: '12px',
-                          border: '2px solid #e9ecef',
-                          borderRadius: '8px',
-                          backgroundColor: '#f8f9fa'
-                        }}>
-                          <div style={{ 
-                            minWidth: '32px',
-                            height: '32px',
-                            display: 'flex',
+                        <div key={aIdx} style={{ marginBottom: '12px' }}>
+                          <div className="answer-option-row" style={{ 
+                            display: 'flex', 
+                            gap: '12px', 
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: '#1FA8DC',
-                            color: 'white',
-                            borderRadius: '6px',
-                            fontSize: '1rem',
-                            fontWeight: '700'
+                            padding: '12px',
+                            border: '2px solid #e9ecef',
+                            borderRadius: '8px',
+                            backgroundColor: '#f8f9fa'
                           }}>
-                            {answerLetter}
+                            <div style={{ 
+                              minWidth: '32px',
+                              height: '32px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: '#1FA8DC',
+                              color: 'white',
+                              borderRadius: '6px',
+                              fontSize: '1rem',
+                              fontWeight: '700'
+                            }}>
+                              {answerLetter}
+                            </div>
+                            
+                            <input
+                              type="text"
+                              value={question.answer_texts && question.answer_texts[aIdx] ? question.answer_texts[aIdx] : ''}
+                              onChange={(e) => {
+                                const newAnswerTexts = [...(question.answer_texts || [])];
+                                newAnswerTexts[aIdx] = e.target.value;
+                                handleQuestionChange(qIdx, 'answer_texts', newAnswerTexts);
+                              }}
+                              placeholder={`Enter text for option ${answerLetter} (optional)`}
+                              style={{
+                                flex: 1,
+                                padding: '10px 14px',
+                                border: '2px solid #e9ecef',
+                                borderRadius: '8px',
+                                fontSize: '0.95rem'
+                              }}
+                            />
                           </div>
                           
-                          <input
-                            type="text"
-                            value={question.answer_texts && question.answer_texts[aIdx] ? question.answer_texts[aIdx] : ''}
-                            onChange={(e) => {
-                              const newAnswerTexts = [...(question.answer_texts || [])];
-                              newAnswerTexts[aIdx] = e.target.value;
-                              handleQuestionChange(qIdx, 'answer_texts', newAnswerTexts);
-                            }}
-                            placeholder={`Enter text for option ${answerLetter} (optional)`}
-                            style={{
-                              flex: 1,
-                              padding: '10px 14px',
-                              border: '2px solid #e9ecef',
-                              borderRadius: '8px',
-                              fontSize: '0.95rem'
-                            }}
-                          />
-                          
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <div className="answer-buttons-container" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', width: '100%', marginTop: '8px' }}>
                             {hasTrashButton && (
                               <button
                                 type="button"

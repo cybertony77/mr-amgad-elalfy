@@ -142,6 +142,7 @@ export default async function handler(req, res) {
         deadline_date: deadline_type === 'with_deadline' ? deadline_date : null,
         timer: timer || null,
         shuffle_questions_and_answers: shuffle_questions_and_answers === true || shuffle_questions_and_answers === 'true',
+        show_details_after_submitting: show_details_after_submitting === true || show_details_after_submitting === 'true',
         date: new Date(),
         questions: questions.map(q => ({
           question_text: q.question_text || '',

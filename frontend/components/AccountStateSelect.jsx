@@ -6,7 +6,8 @@ const AccountStateSelect = ({
   placeholder = "Select Account State", 
   required = false,
   disabled = false,
-  style = {} 
+  style = {},
+  label = "Account State"
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -40,7 +41,7 @@ const AccountStateSelect = ({
     <div className="form-group" style={{ ...style, marginBottom: '16px', textAlign: 'left' }}>
       {!style.hideLabel && (
       <label style={{ textAlign: 'left' }}>
-        Account State {required && <span style={{color: 'red'}}>*</span>}
+        {label} {required && <span style={{color: 'red'}}>*</span>}
       </label>
       )}
       <div 

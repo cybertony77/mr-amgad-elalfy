@@ -813,59 +813,63 @@ export default function MyHomeworks() {
                     <div style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px' }}>
                       {[homework.week !== undefined && homework.week !== null ? `Week ${homework.week}` : null, homework.lesson_name].filter(Boolean).join(' • ')}
                     </div>
-                    {homework.homework_type !== 'pages_from_book' && (
-                      <div style={{ color: '#6c757d', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span>{homework.questions?.length || 0} Question{homework.questions?.length !== 1 ? 's' : ''}</span>
-                        <span>•</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Image src="/clock.svg" alt="Timer" width={18} height={18} />
-                          {homework.timer ? `Timer ${homework.timer} minute${homework.timer !== 1 ? 's' : ''}` : 'No Timer'}
-                        </span>
-                        {homework.deadline_type === 'with_deadline' && homework.deadline_date && (
-                          <>
-                            <span>•</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Image src="/clock.svg" alt="Deadline" width={18} height={18} />
-                              {homework.deadline_date ? (() => {
-                                try {
-                                  // Parse date in local timezone
-                                  let deadline;
-                                  if (typeof homework.deadline_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(homework.deadline_date)) {
-                                    const [year, month, day] = homework.deadline_date.split('-').map(Number);
-                                    deadline = new Date(year, month - 1, day);
-                                  } else {
-                                    deadline = new Date(homework.deadline_date);
-                                  }
-                                  return `With deadline date : ${deadline.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`;
-                                } catch (e) {
-                                  return `With deadline date : ${homework.deadline_date}`;
-                                }
-                              })() : 'With no deadline date'}
-                            </span>
-                          </>
-                        )}
+                    {homework.homework_type === 'pages_from_book' ? (
+                      <div style={{
+                        padding: '12px 16px',
+                        backgroundColor: '#ffffff',
+                        border: '2px solid #e9ecef',
+                        borderRadius: '8px',
+                        fontSize: '0.95rem',
+                        color: '#495057',
+                        textAlign: 'left',
+                        display: 'inline-block',
+                        maxWidth: '350px'
+                      }}>
+                        <strong>From page {homework.from_page} to page {homework.to_page} in {homework.book_name}</strong>
                       </div>
-                    )}
-                    {homework.homework_type === 'pages_from_book' && homework.deadline_type === 'with_deadline' && homework.deadline_date && (
-                      <div style={{ color: '#6c757d', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Image src="/clock.svg" alt="Deadline" width={18} height={18} />
-                          {homework.deadline_date ? (() => {
-                            try {
-                              // Parse date in local timezone
-                              let deadline;
-                              if (typeof homework.deadline_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(homework.deadline_date)) {
-                                const [year, month, day] = homework.deadline_date.split('-').map(Number);
-                                deadline = new Date(year, month - 1, day);
-                              } else {
-                                deadline = new Date(homework.deadline_date);
-                              }
-                              return `With deadline date : ${deadline.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`;
-                            } catch (e) {
-                              return `With deadline date : ${homework.deadline_date}`;
-                            }
-                          })() : 'With no deadline date'}
-                        </span>
+                    ) : (
+                      <div style={{
+                        padding: '12px 16px',
+                        backgroundColor: '#ffffff',
+                        border: '2px solid #e9ecef',
+                        borderRadius: '8px',
+                        fontSize: '0.95rem',
+                        color: '#495057',
+                        textAlign: 'left',
+                        display: 'inline-block',
+                        maxWidth: '350px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span>{homework.questions?.length || 0} Question{homework.questions?.length !== 1 ? 's' : ''}</span>
+                          <span>•</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Image src="/clock.svg" alt="Timer" width={18} height={18} />
+                            {homework.timer ? `Timer ${homework.timer} minute${homework.timer !== 1 ? 's' : ''}` : 'No Timer'}
+                          </span>
+                          {homework.deadline_type === 'with_deadline' && homework.deadline_date && (
+                            <>
+                              <span>•</span>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Image src="/clock.svg" alt="Deadline" width={18} height={18} />
+                                {homework.deadline_date ? (() => {
+                                  try {
+                                    // Parse date in local timezone
+                                    let deadline;
+                                    if (typeof homework.deadline_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(homework.deadline_date)) {
+                                      const [year, month, day] = homework.deadline_date.split('-').map(Number);
+                                      deadline = new Date(year, month - 1, day);
+                                    } else {
+                                      deadline = new Date(homework.deadline_date);
+                                    }
+                                    return `With deadline date : ${deadline.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`;
+                                  } catch (e) {
+                                    return `With deadline date : ${homework.deadline_date}`;
+                                  }
+                                })() : 'With no deadline date'}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -880,34 +884,36 @@ export default function MyHomeworks() {
                       if (completedHomeworks.has(homework._id)) {
                         return (
                           <>
-                            <button
-                              onClick={() => router.push(`/student_dashboard/my_homeworks/details?id=${homework._id}`)}
-                              style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#1FA8DC',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                fontWeight: '600',
-                                transition: 'all 0.2s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = '#0d5a7a';
-                                e.target.style.transform = 'translateY(-1px)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = '#1FA8DC';
-                                e.target.style.transform = 'translateY(0)';
-                              }}
-                            >
-                              <Image src="/details.svg" alt="Details" width={18} height={18} />
-                              Details
-                            </button>
+                            {(homework.show_details_after_submitting === true || homework.show_details_after_submitting === 'true') && (
+                              <button
+                                onClick={() => router.push(`/student_dashboard/my_homeworks/details?id=${homework._id}`)}
+                                style={{
+                                  padding: '8px 16px',
+                                  backgroundColor: '#1FA8DC',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  fontSize: '0.9rem',
+                                  fontWeight: '600',
+                                  transition: 'all 0.2s ease',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.backgroundColor = '#0d5a7a';
+                                  e.target.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.backgroundColor = '#1FA8DC';
+                                  e.target.style.transform = 'translateY(0)';
+                                }}
+                              >
+                                <Image src="/details.svg" alt="Details" width={18} height={18} />
+                                Details
+                              </button>
+                            )}
                             <button
                               style={{
                                 padding: '8px 16px',
@@ -983,45 +989,30 @@ export default function MyHomeworks() {
                       if (homework.homework_type === 'pages_from_book') {
                         const hwStatus = getHwDoneStatus(homework.week);
                         return (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                            <div style={{
-                              padding: '12px 16px',
-                              backgroundColor: '#ffffff',
-                              border: '2px solid #e9ecef',
-                              borderRadius: '8px',
-                              fontSize: '0.95rem',
-                              color: '#495057',
-                              textAlign: 'left',
-                              flex: 1,
-                              minWidth: '200px'
-                            }}>
-                              <strong>From page {homework.from_page} to page {homework.to_page} in {homework.book_name} book</strong>
-                            </div>
-                            <button
-                              style={{
-                                padding: '8px 16px',
-                                backgroundColor: hwStatus === true ? '#28a745' : hwStatus === "No Homework" ? '#dc3545' : hwStatus === "Not Completed" ? '#ffc107' : '#dc3545',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '20px',
-                                cursor: 'default',
-                                fontSize: '0.9rem',
-                                fontWeight: '600',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                whiteSpace: 'nowrap'
-                              }}
-                            >
-                              {hwStatus === true 
-                                ? `✅ Done${getHwDegree(homework.week, homework._id) ? ` (${getHwDegree(homework.week, homework._id)})` : ''}` 
-                                : hwStatus === "No Homework" 
-                                ? '🚫 No Homework'
-                                : hwStatus === "Not Completed"
-                                ? '⚠️ Not Completed'
-                                : '❌ Not Done'}
-                            </button>
-                          </div>
+                          <button
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: hwStatus === true ? '#28a745' : hwStatus === "No Homework" ? '#dc3545' : hwStatus === "Not Completed" ? '#ffc107' : '#dc3545',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '20px',
+                              cursor: 'default',
+                              fontSize: '0.9rem',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {hwStatus === true 
+                              ? `✅ Done${getHwDegree(homework.week, homework._id) ? ` (${getHwDegree(homework.week, homework._id)})` : ''}` 
+                              : hwStatus === "No Homework" 
+                              ? '🚫 No Homework'
+                              : hwStatus === "Not Completed"
+                              ? '⚠️ Not Completed'
+                              : '❌ Not Done'}
+                          </button>
                         );
                       }
                       

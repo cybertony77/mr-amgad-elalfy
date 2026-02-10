@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Title from "../components/Title";
 import { useProfile, useUpdateProfile, useProfilePicture } from '../lib/api/auth';
+import { useCheckUsername } from '../lib/api/assistants';
 import apiClient from '../lib/axios';
 import Image from 'next/image';
 import PhoneInput from 'react-phone-input-2';
@@ -25,6 +26,7 @@ export default function EditMyProfile() {
   const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
   const { data: profilePictureUrl } = useProfilePicture();
   const updateProfileMutation = useUpdateProfile();
+  const usernameCheck = useCheckUsername(form.id);
   
   // Set image preview from signed URL when available
   useEffect(() => {
@@ -71,7 +73,14 @@ export default function EditMyProfile() {
   }, [profileError]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    // For id (username) field only, remove all spaces
+    if (name === 'id') {
+      const trimmedValue = value.replace(/\s/g, ''); // Remove all spaces
+      setForm({ ...form, [name]: trimmedValue });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   // Process image file (shared by file input and drag & drop)
@@ -234,6 +243,14 @@ export default function EditMyProfile() {
     setSuccess(false);
     
     const changedFields = getChangedFields();
+    
+    // Check if username was changed and if it already exists
+    if (changedFields.id && changedFields.id !== originalForm.id) {
+      if (usernameCheck.data && usernameCheck.data.exists) {
+        setError("❌ Username already exists. Please choose a different username.");
+        return;
+      }
+    }
     
     // Validate email - always required
     if (!form.email || form.email.trim() === '') {
@@ -408,6 +425,32 @@ export default function EditMyProfile() {
           @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+          }
+          .username-feedback {
+            margin-top: 8px;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+          }
+          .username-feedback.checking {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+          }
+          .username-feedback.taken {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+          }
+          .username-feedback.available {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+          }
+          .error-border {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
           }
         `}</style>
                  <Title backText={"Back"} href={null}>
@@ -611,11 +654,38 @@ export default function EditMyProfile() {
             <div className="form-group">
               <label>Username</label>
               <input
-                className="form-input"
+                className={`form-input ${!usernameCheck.isLoading && usernameCheck.data && usernameCheck.data.exists && form.id !== originalForm?.id ? 'error-border' : ''}`}
                 name="id"
+                placeholder="Enter username"
                 value={form.id}
                 onChange={handleChange}
+                onKeyDown={(e) => {
+                  // Prevent space key from being entered
+                  if (e.key === ' ') {
+                    e.preventDefault();
+                  }
+                }}
               />
+              {/* Username availability feedback */}
+              {form.id && form.id !== originalForm?.id && (
+                <div>
+                  {usernameCheck.isLoading && (
+                    <div className="username-feedback checking">
+                      🔍 Checking availability...
+                    </div>
+                  )}
+                  {!usernameCheck.isLoading && usernameCheck.data && usernameCheck.data.exists && (
+                    <div className="username-feedback taken">
+                      ❌ This username is already taken, use anther one
+                    </div>
+                  )}
+                  {!usernameCheck.isLoading && usernameCheck.data && !usernameCheck.data.exists && (
+                    <div className="username-feedback available">
+                      ✅ This username is available
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label>Phone Number</label>

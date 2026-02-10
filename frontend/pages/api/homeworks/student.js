@@ -116,7 +116,8 @@ export default async function handler(req, res) {
             deadline_type: hw.deadline_type || 'no_deadline',
             deadline_date: hw.deadline_date || null,
             timer: hw.timer || null,
-            shuffle_questions_and_answers: hw.shuffle_questions_and_answers || false
+            shuffle_questions_and_answers: hw.shuffle_questions_and_answers || false,
+            show_details_after_submitting: hw.show_details_after_submitting || false
           };
 
           // Add pages_from_book fields if applicable
