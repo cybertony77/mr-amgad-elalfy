@@ -60,13 +60,7 @@ export default function ScoringRulesAndRanking() {
     enabled: isScoringEnabled,
   });
 
-  // Filter conditions based on SYSTEM_HOMEWORKS and SYSTEM_QUIZZES config
-  const allConditions = conditionsData?.conditions || [];
-  const conditions = allConditions.filter(condition => {
-    if (condition.type === 'homework' && !isHomeworksEnabled) return false;
-    if (condition.type === 'quiz' && !isQuizzesEnabled) return false;
-    return true;
-  });
+  const conditions = conditionsData?.conditions || [];
 
   const getConditionLabel = (condition) => {
     if (condition.type === 'attendance') {
