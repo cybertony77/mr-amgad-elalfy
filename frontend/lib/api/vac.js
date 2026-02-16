@@ -20,6 +20,7 @@ const vacApi = {
     if (params.search) queryParams.append('search', params.search);
     if (params.sortBy) queryParams.append('sortBy', params.sortBy);
     if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    if (params.vac_activated) queryParams.append('vac_activated', params.vac_activated);
     
     const queryString = queryParams.toString();
     const url = queryString ? `/api/vac?${queryString}` : '/api/vac';

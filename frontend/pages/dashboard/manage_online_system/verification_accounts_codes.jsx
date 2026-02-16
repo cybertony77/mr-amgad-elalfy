@@ -74,6 +74,8 @@ export default function VerificationAccountsCodes() {
   const [idChecking, setIdChecking] = useState(false);
   const [idExists, setIdExists] = useState(null);
   const [copiedCodeId, setCopiedCodeId] = useState(null); // Track which code was copied
+  const [vacActivatedFilter, setVacActivatedFilter] = useState(''); // '', 'true', 'false'
+  const [vacFilterOpen, setVacFilterOpen] = useState(false);
   const [systemName, setSystemName] = useState('Mr. Amgad El-Alfy Math Academy');
   const [studentSignupVideo, setStudentSignupVideo] = useState('');
 
@@ -101,6 +103,7 @@ export default function VerificationAccountsCodes() {
     search: searchTerm.trim() || undefined,
     sortBy: 'account_id',
     sortOrder: 'asc',
+    vac_activated: vacActivatedFilter || undefined,
   }, {
     refetchInterval: 60 * 1000,
     refetchIntervalInBackground: false,
@@ -233,10 +236,10 @@ export default function VerificationAccountsCodes() {
     },
   });
 
-  // Reset to page 1 when search term changes
+  // Reset to page 1 when search term or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, vacActivatedFilter]);
 
   // Reset to page 1 when search term becomes empty
   useEffect(() => {
@@ -315,12 +318,16 @@ export default function VerificationAccountsCodes() {
       if (showPagePopup && !event.target.closest('.pagination-page-info') && !event.target.closest('.page-popup')) {
         setShowPagePopup(false);
       }
+      // Close VAC filter dropdown when clicking outside
+      if (vacFilterOpen && !event.target.closest('.vac-filter-wrapper')) {
+        setVacFilterOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showPagePopup]);
+  }, [showPagePopup, vacFilterOpen]);
 
   // Auto-refresh data every 60 seconds
   useEffect(() => {
@@ -483,6 +490,70 @@ Best regards
     window.open(whatsappUrl, '_blank');
   };
 
+  // Handle WhatsApp send to parent
+  const handleSendParentWhatsApp = (vac) => {
+    if (!vac.parents_phone) {
+      alert('Parent phone number not available');
+      return;
+    }
+
+    // Extract first name from full name
+    const firstName = vac.name ? vac.name.split(' ')[0] : 'Student';
+    
+    // Get current domain from URL
+    const domain = typeof window !== 'undefined' ? window.location.origin : '';
+    const signUpUrl = `${domain}/sign-up`;
+
+    // Create the message
+    let message = `Dear ${firstName}'s Parent
+This is ${firstName}'s Verification Account Code (VAC) :
+
+*${vac.VAC}*
+
+Please do not share this code with anyone.
+To complete your sign-up, click the link below:
+
+🖇 ${signUpUrl}`;
+
+    // Add video link if STUDENT_SIGNUP_VIDEO is not empty
+    if (studentSignupVideo && studentSignupVideo.trim() !== '') {
+      message += `\n\n🎥 View this video to know how to sign up : ${studentSignupVideo}`;
+    }
+
+    message += `\n\nNote :- 
+   • ${firstName}'s ID : ${vac.account_id}
+
+Best regards
+ – ${systemName}`;
+
+    // Use parent phone number
+    let phoneNumber = vac.parents_phone.replace(/[^0-9]/g, '');
+    
+    if (!phoneNumber || phoneNumber.length < 3) {
+      alert('Invalid parent phone number format');
+      return;
+    }
+    
+    const startsWithEgyptPrefix = phoneNumber.startsWith('012') || 
+                                   phoneNumber.startsWith('011') || 
+                                   phoneNumber.startsWith('010') || 
+                                   phoneNumber.startsWith('015');
+    
+    const hasCountryCode = phoneNumber.startsWith('20');
+    
+    if (!startsWithEgyptPrefix && !hasCountryCode) {
+      alert('Country code required. Please add country code (e.g., 20 for Egypt)');
+      return;
+    }
+    
+    if (startsWithEgyptPrefix && !hasCountryCode) {
+      phoneNumber = '20' + phoneNumber.substring(1);
+    }
+    
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   if (isLoading) {
     return (
       <div style={{ 
@@ -523,6 +594,111 @@ Best regards
             onKeyDown={handleSearchKeyPress}
             onButtonClick={handleSearch}
           />
+        </div>
+
+        {/* VAC Activated Filter */}
+        <div className="vac-filter-wrapper" style={{
+          background: 'white',
+          borderRadius: 16,
+          padding: '24px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          marginBottom: 24,
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#495057', fontSize: '0.95rem' }}>
+                Filter by VAC State
+              </label>
+              <div style={{ position: 'relative' }}>
+                <div
+                  style={{
+                    padding: '14px 16px',
+                    border: vacFilterOpen ? '2px solid #1FA8DC' : '2px solid #e9ecef',
+                    borderRadius: '10px',
+                    backgroundColor: vacActivatedFilter !== '' ? '#f0f8ff' : '#ffffff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '1rem',
+                    color: vacActivatedFilter !== '' ? '#1FA8DC' : '#adb5bd',
+                    fontWeight: vacActivatedFilter !== '' ? '600' : '400',
+                    transition: 'all 0.3s ease',
+                    boxShadow: vacFilterOpen ? '0 0 0 3px rgba(31, 168, 220, 0.1)' : 'none'
+                  }}
+                  onClick={() => setVacFilterOpen(!vacFilterOpen)}
+                >
+                  <span>
+                    {vacActivatedFilter === '' ? 'Select VAC State' : vacActivatedFilter === 'true' ? '✅ Activated' : '❌ Not Activated Yet'}
+                  </span>
+                </div>
+                
+                {vacFilterOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    backgroundColor: '#ffffff',
+                    border: '2px solid #e9ecef',
+                    borderRadius: '10px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                    zIndex: 1000,
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    marginTop: '4px'
+                  }}>
+                    {/* Clear selection option */}
+                    <div
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #f8f9fa',
+                        transition: 'background-color 0.2s ease',
+                        color: '#dc3545',
+                        fontWeight: '500'
+                      }}
+                      onClick={() => {
+                        setVacActivatedFilter('');
+                        setVacFilterOpen(false);
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#fff5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#ffffff'}
+                    >
+                      ✕ Clear selection
+                    </div>
+                    {[
+                      { value: 'true', label: '✅ Activated' },
+                      { value: 'false', label: '❌ Not Activated Yet' }
+                    ].map((option) => (
+                      <div
+                        key={option.value}
+                        style={{
+                          padding: '12px 16px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #f8f9fa',
+                          transition: 'background-color 0.2s ease',
+                          color: vacActivatedFilter === option.value ? '#1FA8DC' : '#000000',
+                          backgroundColor: vacActivatedFilter === option.value ? '#f0f8ff' : '#ffffff',
+                          fontWeight: vacActivatedFilter === option.value ? '600' : '400'
+                        }}
+                        onClick={() => {
+                          setVacActivatedFilter(option.value);
+                          setVacFilterOpen(false);
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = vacActivatedFilter === option.value ? '#f0f8ff' : '#ffffff'}
+                      >
+                        {option.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="history-container">
@@ -573,14 +749,17 @@ Best regards
               <Table striped highlightOnHover withTableBorder withColumnBorders>
                 <Table.Thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa'}}>
                   <Table.Tr>
-                    <Table.Th style={{ width: '10%', textAlign: 'center' }}>ID</Table.Th>
-                    <Table.Th style={{ width: '20%', textAlign: 'center' }}>Name</Table.Th>
-                    <Table.Th style={{ width: '8%', textAlign: 'center' }}>Copy</Table.Th>
-                    <Table.Th style={{ width: '15%', textAlign: 'center' }}>VAC</Table.Th>
-                    <Table.Th style={{ width: '15%', textAlign: 'center' }}>VAC State</Table.Th>
-                    <Table.Th style={{ width: '20%', textAlign: 'center' }}>Regenerate VAC</Table.Th>
-                    <Table.Th style={{ width: '20%', textAlign: 'center' }}>Send To Student</Table.Th>
-                    <Table.Th style={{ width: '10%', textAlign: 'center' }}>Delete</Table.Th>
+                    <Table.Th style={{ minWidth: '60px', textAlign: 'center' }}>ID</Table.Th>
+                    <Table.Th style={{ minWidth: '130px', textAlign: 'center' }}>Name</Table.Th>
+                    <Table.Th style={{ minWidth: '120px', textAlign: 'center' }}>Student Phone</Table.Th>
+                    <Table.Th style={{ minWidth: '120px', textAlign: 'center' }}>Parent Phone</Table.Th>
+                    <Table.Th style={{ minWidth: '50px', textAlign: 'center' }}>Copy</Table.Th>
+                    <Table.Th style={{ minWidth: '100px', textAlign: 'center' }}>VAC</Table.Th>
+                    <Table.Th style={{ minWidth: '130px', textAlign: 'center' }}>VAC State</Table.Th>
+                    <Table.Th style={{ minWidth: '120px', textAlign: 'center' }}>Regenerate VAC</Table.Th>
+                    <Table.Th style={{ minWidth: '100px', textAlign: 'center' }}>Send To Student</Table.Th>
+                    <Table.Th style={{ minWidth: '100px', textAlign: 'center' }}>Send To Parent</Table.Th>
+                    <Table.Th style={{ minWidth: '80px', textAlign: 'center' }}>Delete</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -592,6 +771,20 @@ Best regards
                           vac.name
                         ) : (
                           <span style={{ color: '#dc3545', fontStyle: 'italic' }}>Not Exist Yet!</span>
+                        )}
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: 'center', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                        {vac.phone ? (
+                          vac.phone
+                        ) : (
+                          <span style={{ color: '#6c757d', fontStyle: 'italic' }}>—</span>
+                        )}
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: 'center', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                        {vac.parents_phone ? (
+                          vac.parents_phone
+                        ) : (
+                          <span style={{ color: '#6c757d', fontStyle: 'italic' }}>—</span>
                         )}
                       </Table.Td>
                       <Table.Td style={{ textAlign: 'center' }}>
@@ -673,6 +866,33 @@ Best regards
                         {vac.phone ? (
                           <button
                             onClick={() => handleSendWhatsApp(vac)}
+                            style={{
+                              backgroundColor: '#25D366',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontWeight: '500',
+                              transition: 'background-color 0.2s',
+                              margin: '0 auto'
+                            }}
+                          >
+                            <Image src="/whatsapp.svg" alt="WhatsApp" width={25} height={25} style={{ display: 'inline-block' }} />
+                            Send
+                          </button>
+                        ) : (
+                          <span style={{ color: '#6c757d', fontStyle: 'italic', fontSize: '0.85rem' }}>No phone</span>
+                        )}
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: 'center' }}>
+                        {vac.parents_phone ? (
+                          <button
+                            onClick={() => handleSendParentWhatsApp(vac)}
                             style={{
                               backgroundColor: '#25D366',
                               color: 'white',

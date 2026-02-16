@@ -251,6 +251,22 @@ export default function AddStudent() {
         setNewId(studentId.toString());
         setVacCode(vac || "");
         setShowQRButton(true); // Show QR button after successful submission
+        // Reset form fields after successful addition
+        setForm({
+          id: "",
+          name: "",
+          age: "",
+          gender: "",
+          grade: "",
+          school: "",
+          phone: "",
+          parentsPhone: "",
+          main_center: "",
+          comment: "",
+          account_state: "Activated",
+        });
+        setIdError("");
+        setIdValid(false);
       },
       onError: (err) => {
         setError(err.response?.data?.error || err.message);

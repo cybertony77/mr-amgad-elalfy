@@ -516,9 +516,9 @@ export default async function handler(req, res) {
       // Generate VAC code for the new student
       // Helper function to generate VAC code (7 chars: 3 numbers, 2 uppercase, 2 lowercase)
       const generateVACCode = () => {
-        const numbers = '0123456789';
-        const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+        const numbers = '123456789';
+        const uppercase = 'ABDEFGHJKMNPQRTUVWXYZ';
+        const lowercase = 'abdefghjkmnpqrtuvwxyz';
         
         // Generate 3 random numbers
         const numPart = Array.from({ length: 3 }, () => 

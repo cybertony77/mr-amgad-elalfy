@@ -376,13 +376,42 @@ export default function StudentInfo() {
     
     // Check if it's a numeric ID
     if (/^\d+$/.test(searchTerm)) {
-      // It's a numeric ID, search directly
-      setSearchId(searchTerm);
+      if (allStudents) {
+        // First check for exact student ID match
+        const exactIdMatch = allStudents.find(s => s.id.toString() === searchTerm);
+        if (exactIdMatch) {
+          setSearchId(searchTerm);
+          return;
+        }
+        // No exact ID match, search by phone number (student phone & parent phone)
+        const phoneMatches = allStudents.filter(s =>
+          (s.phone && s.phone.includes(searchTerm)) ||
+          (s.parents_phone && s.parents_phone.includes(searchTerm)) ||
+          (s.parentsPhone && s.parentsPhone.includes(searchTerm))
+        );
+        if (phoneMatches.length === 1) {
+          const foundStudent = phoneMatches[0];
+          setSearchId(foundStudent.id.toString());
+          setStudentId(foundStudent.id.toString());
+        } else if (phoneMatches.length > 1) {
+          setSearchResults(phoneMatches);
+          setShowSearchResults(true);
+          setError(`Found ${phoneMatches.length} students. Please select one.`);
+        } else {
+          // No phone match either, try as student ID anyway
+          setSearchId(searchTerm);
+        }
+      } else {
+        setSearchId(searchTerm);
+      }
     } else {
-      // It's a name, search through all students (case-insensitive, includes)
+      // Not purely numeric - search by name AND phone number
       if (allStudents) {
         const matchingStudents = allStudents.filter(student => 
-          student.name.toLowerCase().includes(searchTerm.toLowerCase())
+          student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (student.phone && student.phone.includes(searchTerm)) ||
+          (student.parents_phone && student.parents_phone.includes(searchTerm)) ||
+          (student.parentsPhone && student.parentsPhone.includes(searchTerm))
         );
         
         if (matchingStudents.length === 1) {
@@ -396,7 +425,7 @@ export default function StudentInfo() {
           setShowSearchResults(true);
           setError(`Found ${matchingStudents.length} students. Please select one.`);
         } else {
-          setError(`No student found with name starting with "${searchTerm}"`);
+          setError(`No student found matching "${searchTerm}"`);
           setSearchId("");
         }
       } else {

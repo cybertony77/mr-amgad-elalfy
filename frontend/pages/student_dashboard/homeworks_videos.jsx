@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Image from 'next/image';
 import Title from '../../components/Title';
+import R2VideoPlayer from '../../components/R2VideoPlayer';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../lib/axios';
 import { useProfile } from '../../lib/api/auth';
@@ -142,6 +143,14 @@ function StudentWeekSelect({ availableWeeks = [], selectedWeek, onWeekChange, is
   );
 }
 
+// Check if a video ID is an R2 key (not a YouTube ID)
+// YouTube IDs are exactly 11 characters matching [a-zA-Z0-9_-]
+// R2 keys contain '/' or are not matching YouTube ID format
+function isR2Key(videoId) {
+  if (!videoId) return false;
+  return !/^[a-zA-Z0-9_-]{11}$/.test(videoId);
+}
+
 // Build embed URL
 function buildEmbedUrl(videoId) {
   return `https://www.youtube.com/embed/${videoId}?controls=1&rel=0&modestbranding=1&disablekb=1&fs=1`;
@@ -171,6 +180,7 @@ export default function HomeworksVideos() {
   const videoContainerRef = useRef(null);
   const videoStartTimeRef = useRef(null); // Track when video was opened
   const isClosingVideoRef = useRef(false); // Prevent multiple close calls
+  const r2CompletedRef = useRef(false); // Track if R2 video was completed (>= 90%)
   const [vhcPopupOpen, setVhcPopupOpen] = useState(false);
   const [vhc, setVhc] = useState('');
   const [vhcError, setVhcError] = useState('');
@@ -345,7 +355,9 @@ export default function HomeworksVideos() {
   // Open video popup
   const openVideoPopup = async (session, videoId, videoIndex) => {
     // Get video type, default to 'youtube' for backward compatibility
-    const videoType = session[`video_type_${videoIndex}`] || 'youtube';
+    // Also detect R2 keys by format if video_type is missing
+    const storedType = session[`video_type_${videoIndex}`];
+    const videoType = storedType || (isR2Key(videoId) ? 'r2' : 'youtube');
     
     // Check if video is unlocked
     if (isVideoUnlocked(session)) {
@@ -419,6 +431,7 @@ export default function HomeworksVideos() {
       });
       setVideoPopupOpen(true);
       videoStartTimeRef.current = Date.now();
+      r2CompletedRef.current = false;
     } else {
       // Video is locked - require VHC
       setPendingVideo({ session, videoId, videoIndex, videoType });
@@ -481,6 +494,7 @@ export default function HomeworksVideos() {
         });
         setVideoPopupOpen(true);
         videoStartTimeRef.current = Date.now();
+        r2CompletedRef.current = false;
         setPendingVideo(null);
         setVhc('');
         
@@ -520,6 +534,12 @@ export default function HomeworksVideos() {
     setVhcError('');
   };
 
+  // Handle R2 video completion (>= 90% watched)
+  const handleR2VideoComplete = useCallback(async (videoId, percent) => {
+    r2CompletedRef.current = true;
+    console.log(`[HOMEWORK VIDEOS] R2 video ${videoId} completed at ${Math.round(percent)}%`);
+  }, []);
+
   // Close video popup and mark view_homework_video
   const closeVideoPopup = async () => {
     // Prevent multiple calls
@@ -528,18 +548,25 @@ export default function HomeworksVideos() {
     }
     
     // Only mark view_homework_video if video was actually watched
-    // (at least 5 seconds to prevent accidental closes)
+    // For YouTube: at least 5 seconds to prevent accidental closes
+    // For R2: must have reached >= 90% of the video
     const minWatchTime = 5000; // 5 seconds in milliseconds
     const watchTime = videoStartTimeRef.current ? Date.now() - videoStartTimeRef.current : 0;
     
     // Close popup immediately (UI feedback)
     const currentVideo = selectedVideo;
+    const isR2Video = currentVideo?.video_type === 'r2' || isR2Key(currentVideo?.video_ID);
+    const r2Completed = r2CompletedRef.current;
     setVideoPopupOpen(false);
     setSelectedVideo(null);
     videoStartTimeRef.current = null;
+    r2CompletedRef.current = false;
+    
+    // Determine if video was actually watched
+    const videoWasWatched = isR2Video ? r2Completed : (watchTime >= minWatchTime);
     
     // Call watch-homework-video API to set view_homework_video=true
-    if (currentVideo && profile?.id && currentVideo._id && watchTime >= minWatchTime) {
+    if (currentVideo && profile?.id && currentVideo._id && videoWasWatched) {
       isClosingVideoRef.current = true;
       try {
         // Convert _id to string if it's an ObjectId
@@ -714,8 +741,8 @@ export default function HomeworksVideos() {
                           videoIndex++;
                         }
                         return videoIds.map((video, vidIndex) => {
-                          // All videos are YouTube now
-                          const videoType = 'youtube';
+                          const storedVideoType = session[`video_type_${video.index}`];
+                          const videoType = storedVideoType || (isR2Key(video.id) ? 'r2' : 'youtube');
                           // Get video name, default to "Video {index}" if not set
                           const videoName = video.name || `Video ${video.index}`;
                           const isUnlocked = isVideoUnlocked(session);
@@ -1038,7 +1065,7 @@ export default function HomeworksVideos() {
                 <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{selectedVideo.name}</h3>
               </div>
 
-              {/* Video Iframe */}
+              {/* Video Player */}
               <div 
                 className="video-player-wrapper"
                 style={{ 
@@ -1060,25 +1087,33 @@ export default function HomeworksVideos() {
                 onDragStart={(e) => e.preventDefault()}
                 onSelectStart={(e) => e.preventDefault()}
               >
-                <iframe
-                  src={buildEmbedUrl(selectedVideo.video_ID || selectedVideo.video_ID_1 || '')}
-                  frameBorder="0"
-                  allow="encrypted-media; autoplay; fullscreen; picture-in-picture"
-                  allowFullScreen={true}
-                  playsInline={true}
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    maxHeight: '100vh',
-                    aspectRatio: '16 / 9',
-                    border: 'none',
-                    outline: 'none'
-                  }}
-                  onContextMenu={(e) => e.preventDefault()}
-                  onDragStart={(e) => e.preventDefault()}
-                  onSelectStart={(e) => e.preventDefault()}
-                  draggable={false}
-                />
+                {(selectedVideo.video_type === 'r2' || isR2Key(selectedVideo.video_ID)) ? (
+                  <R2VideoPlayer
+                    r2Key={selectedVideo.video_ID}
+                    videoId={selectedVideo._id}
+                    onComplete={handleR2VideoComplete}
+                  />
+                ) : (
+                  <iframe
+                    src={buildEmbedUrl(selectedVideo.video_ID || selectedVideo.video_ID_1 || '')}
+                    frameBorder="0"
+                    allow="encrypted-media; autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen={true}
+                    playsInline={true}
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      maxHeight: '100vh',
+                      aspectRatio: '16 / 9',
+                      border: 'none',
+                      outline: 'none'
+                    }}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onDragStart={(e) => e.preventDefault()}
+                    onSelectStart={(e) => e.preventDefault()}
+                    draggable={false}
+                  />
+                )}
               </div>
 
               {/* Video Description */}

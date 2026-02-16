@@ -22,6 +22,7 @@ export default function UserMenu() {
   const { data: profilePictureUrl } = useProfilePicture();
   const { data: systemConfig } = useSystemConfig();
   const isScoringEnabled = systemConfig?.scoring_system === true || systemConfig?.scoring_system === 'true';
+  const isSubscriptionEnabled = systemConfig?.subscription === true || systemConfig?.subscription === 'true';
 
   // Fallback user object if data is not available yet
   const userData = user || { name: '', id: '', phone: '', role: '' };
@@ -284,7 +285,7 @@ export default function UserMenu() {
               </>
             )}
           </div>
-          {subscription && userData.role !== 'student' && (
+          {isSubscriptionEnabled && subscription && userData.role !== 'student' && (
             <div style={{
               padding: '12px 20px',
               borderBottom: '1px solid #e9ecef',
@@ -384,7 +385,7 @@ export default function UserMenu() {
                   )}
                 </>
               )}
-              {userData.role === 'developer' && (
+              {isSubscriptionEnabled && userData.role === 'developer' && (
                 <button style={menuBtnStyle} onClick={handleSubscriptionDashboard}>
                   <Image src="/dollar.svg" alt="Dollar" width={20} height={20} style={{ marginRight: '8px' }} />
                   Subscription Dashboard

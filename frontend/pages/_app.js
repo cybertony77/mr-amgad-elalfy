@@ -876,6 +876,7 @@ export default function App({ Component, pageProps }) {
   const [showExpiryWarning, setShowExpiryWarning] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [devtoolsBlockEnabled, setDevtoolsBlockEnabled] = useState(true); // Default to true for security
+  const [isSubscriptionEnabled, setIsSubscriptionEnabled] = useState(true); // Default to true
   const [subscription, setSubscription] = useState(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(null);
@@ -906,7 +907,7 @@ export default function App({ Component, pageProps }) {
     "/subscription_dashboard/cancel"
   ], []);
 
-  // Fetch DEVTOOLS_BLOCK configuration
+  // Fetch DEVTOOLS_BLOCK and SYSTEM_SUBSCRIPTION configuration
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -915,11 +916,14 @@ export default function App({ Component, pageProps }) {
           const config = await response.json();
           // Properly check if DEVTOOLS_BLOCK is true (boolean)
           setDevtoolsBlockEnabled(config.DEVTOOLS_BLOCK === true);
+          // Check if SYSTEM_SUBSCRIPTION is enabled (default true)
+          setIsSubscriptionEnabled(config.SYSTEM_SUBSCRIPTION !== false);
         }
       } catch (error) {
-        console.error('Failed to fetch DEVTOOLS_BLOCK config:', error);
+        console.error('Failed to fetch config:', error);
         // Default to false if config can't be loaded (safer default)
         setDevtoolsBlockEnabled(false);
+        setIsSubscriptionEnabled(true); // Default to true for safety
       }
     };
     fetchConfig();
@@ -1173,10 +1177,10 @@ export default function App({ Component, pageProps }) {
     }
   }, [isAuthenticated]);
 
-  // Fetch subscription data when authenticated
+  // Fetch subscription data when authenticated (only if subscription system is enabled)
   useEffect(() => {
     const fetchSubscription = async () => {
-      if (!isAuthenticated || publicPages.includes(router.pathname)) {
+      if (!isSubscriptionEnabled || !isAuthenticated || publicPages.includes(router.pathname)) {
         setSubscription(null);
         return;
       }
@@ -1206,13 +1210,13 @@ export default function App({ Component, pageProps }) {
     const interval = setInterval(fetchSubscription, 30 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, [isAuthenticated, router.pathname, publicPages]);
+  }, [isAuthenticated, isSubscriptionEnabled, router.pathname, publicPages]);
 
-  // Subscription countdown timer calculation
+  // Subscription countdown timer calculation (only if subscription system is enabled)
   useEffect(() => {
-    // Only calculate timer if authenticated and subscription exists
+    // Only calculate timer if authenticated, subscription enabled, and subscription exists
     // Exclude only students, allow assistant, admin, and developer to see timer
-    if (!isAuthenticated || !subscription || userRole === 'student') {
+    if (!isSubscriptionEnabled || !isAuthenticated || !subscription || userRole === 'student') {
       setTimeRemaining(null);
       return;
     }
@@ -1267,10 +1271,15 @@ export default function App({ Component, pageProps }) {
     return () => {
       clearInterval(interval);
     };
-  }, [subscription, userRole, isAuthenticated]);
+  }, [subscription, userRole, isAuthenticated, isSubscriptionEnabled]);
 
-  // Check if we should show subscription warning
+  // Check if we should show subscription warning (only if subscription system is enabled)
   const shouldShowSubscriptionWarning = () => {
+    // Don't show if subscription system is disabled
+    if (!isSubscriptionEnabled) {
+      return false;
+    }
+
     // Don't show if not authenticated
     if (!isAuthenticated) {
       return false;
@@ -1316,8 +1325,12 @@ export default function App({ Component, pageProps }) {
     return `${String(days || 0).padStart(2, '0')} days : ${String(hours || 0).padStart(2, '0')} hours : ${String(minutes || 0).padStart(2, '0')} min : ${String(seconds || 0).padStart(2, '0')} sec`;
   };
 
-  // Check subscription expiration and redirect non-developers/non-students to login
+  // Check subscription expiration and redirect non-developers/non-students to login (only if subscription system is enabled)
   useEffect(() => {
+    // Skip if subscription system is disabled
+    if (!isSubscriptionEnabled) {
+      return;
+    }
     // Only check if authenticated, not on public pages, and subscription data is loaded
     if (!isAuthenticated || publicPages.includes(router.pathname) || isLoadingSubscription || !subscription) {
       return;
@@ -1372,13 +1385,13 @@ export default function App({ Component, pageProps }) {
         }, 1000);
       }
     }
-  }, [isAuthenticated, subscription, isLoadingSubscription, router.pathname, publicPages, userRole, router]);
+  }, [isAuthenticated, isSubscriptionEnabled, subscription, isLoadingSubscription, router.pathname, publicPages, userRole, router]);
 
   // Note: Token expiry checking removed since we now use HTTP-only cookies
   // The server will handle token validation and expiry
 
   // Show loading while checking authentication, subscription, or during route changes
-  if (isLoading || (isAuthenticated && isLoadingSubscription && !publicPages.includes(router.pathname)) || isRouteChanging) {
+  if (isLoading || (isSubscriptionEnabled && isAuthenticated && isLoadingSubscription && !publicPages.includes(router.pathname)) || isRouteChanging) {
     return <Preloader />;
   }
 

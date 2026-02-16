@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../lib/axios';
 import { useProfile } from '../../../lib/api/auth';
+import { useSystemConfig } from '../../../lib/api/system';
 import Title from '../../../components/Title';
 import { Button, TextInput, NumberInput, Select, ActionIcon } from '@mantine/core';
 import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
@@ -12,6 +13,9 @@ export default function ManageDefaults() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: systemConfig } = useSystemConfig();
+  const isHomeworksEnabled = systemConfig?.homeworks === true || systemConfig?.homeworks === 'true';
+  const isQuizzesEnabled = systemConfig?.quizzes === true || systemConfig?.quizzes === 'true';
   const [accessDenied, setAccessDenied] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -45,7 +49,13 @@ export default function ManageDefaults() {
     },
   });
 
-  const conditions = conditionsData?.conditions || [];
+  // Filter conditions based on SYSTEM_HOMEWORKS and SYSTEM_QUIZZES config
+  const allConditions = conditionsData?.conditions || [];
+  const conditions = allConditions.filter(condition => {
+    if (condition.type === 'homework' && !isHomeworksEnabled) return false;
+    if (condition.type === 'quiz' && !isQuizzesEnabled) return false;
+    return true;
+  });
 
   // Update mutation
   const updateMutation = useMutation({

@@ -15,6 +15,8 @@ export default function ScoringRulesAndRanking() {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: systemConfig } = useSystemConfig();
   const isScoringEnabled = systemConfig?.scoring_system === true || systemConfig?.scoring_system === 'true';
+  const isHomeworksEnabled = systemConfig?.homeworks === true || systemConfig?.homeworks === 'true';
+  const isQuizzesEnabled = systemConfig?.quizzes === true || systemConfig?.quizzes === 'true';
   
   // Get student ID from profile and fetch student data
   const studentId = profile?.id ? profile.id.toString() : null;
@@ -58,7 +60,13 @@ export default function ScoringRulesAndRanking() {
     enabled: isScoringEnabled,
   });
 
-  const conditions = conditionsData?.conditions || [];
+  // Filter conditions based on SYSTEM_HOMEWORKS and SYSTEM_QUIZZES config
+  const allConditions = conditionsData?.conditions || [];
+  const conditions = allConditions.filter(condition => {
+    if (condition.type === 'homework' && !isHomeworksEnabled) return false;
+    if (condition.type === 'quiz' && !isQuizzesEnabled) return false;
+    return true;
+  });
 
   const getConditionLabel = (condition) => {
     if (condition.type === 'attendance') {

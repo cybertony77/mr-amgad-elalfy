@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Image from 'next/image';
 import Title from '../../components/Title';
+import R2VideoPlayer from '../../components/R2VideoPlayer';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../lib/axios';
 import { useProfile } from '../../lib/api/auth';
@@ -139,6 +140,14 @@ function StudentWeekSelect({ availableWeeks = [], selectedWeek, onWeekChange, is
       )}
     </div>
   );
+}
+
+// Check if a video ID is an R2 key (not a YouTube ID)
+// YouTube IDs are exactly 11 characters matching [a-zA-Z0-9_-]
+// R2 keys contain '/' or are not matching YouTube ID format
+function isR2Key(videoId) {
+  if (!videoId) return false;
+  return !/^[a-zA-Z0-9_-]{11}$/.test(videoId);
 }
 
 // Build embed URL
@@ -423,7 +432,9 @@ export default function OnlineSessions() {
   // Open video popup
   const openVideoPopup = async (session, videoId, videoIndex) => {
     // Get video type, default to 'youtube' for backward compatibility
-    const videoType = session[`video_type_${videoIndex}`] || 'youtube';
+    // Also detect R2 keys by format if video_type is missing
+    const storedType = session[`video_type_${videoIndex}`];
+    const videoType = storedType || (isR2Key(videoId) ? 'r2' : 'youtube');
     
     // Check if video is unlocked
     if (isVideoUnlocked(session)) {
@@ -514,18 +525,25 @@ export default function OnlineSessions() {
     }
     
     // Only decrement views and mark attendance if video was actually watched
-    // (at least 5 seconds to prevent accidental closes)
+    // For YouTube: at least 5 seconds to prevent accidental closes
+    // For R2: must have reached >= 90% of the video
     const minWatchTime = 5000; // 5 seconds in milliseconds
     const watchTime = videoStartTimeRef.current ? Date.now() - videoStartTimeRef.current : 0;
     
     // Close popup immediately (UI feedback)
     const currentVideo = selectedVideo;
+    const isR2Video = currentVideo?.video_type === 'r2' || isR2Key(currentVideo?.video_ID);
+    const r2Completed = r2CompletedRef.current;
     setVideoPopupOpen(false);
     setSelectedVideo(null);
     videoStartTimeRef.current = null;
+    r2CompletedRef.current = false;
+    
+    // Determine if video was actually watched
+    const videoWasWatched = isR2Video ? r2Completed : (watchTime >= minWatchTime);
     
     // Call watch-video API for both free and paid videos (mark attendance and create history)
-    if (currentVideo && profile?.id && currentVideo._id && watchTime >= minWatchTime) {
+    if (currentVideo && profile?.id && currentVideo._id && videoWasWatched) {
       isClosingVideoRef.current = true;
       try {
         // Convert _id to string if it's an ObjectId
@@ -767,8 +785,8 @@ export default function OnlineSessions() {
                           videoIndex++;
                         }
                         return videoIds.map((video, vidIndex) => {
-                          // All videos are YouTube now
-                          const videoType = 'youtube';
+                          const storedVideoType = session[`video_type_${video.index}`];
+                          const videoType = storedVideoType || (isR2Key(video.id) ? 'r2' : 'youtube');
                           // Get video name, default to "Video {index}" if not set
                           const videoName = video.name || `Video ${video.index}`;
                           const isUnlocked = isVideoUnlocked(session);
@@ -1091,7 +1109,7 @@ export default function OnlineSessions() {
                 <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{selectedVideo.name}</h3>
               </div>
 
-              {/* Video Iframe */}
+              {/* Video Player */}
               <div 
                 className="video-player-wrapper"
                 style={{ 
@@ -1113,25 +1131,33 @@ export default function OnlineSessions() {
                 onDragStart={(e) => e.preventDefault()}
                 onSelectStart={(e) => e.preventDefault()}
               >
-                <iframe
-                  src={buildEmbedUrl(selectedVideo.video_ID || selectedVideo.video_ID_1 || '')}
-                  frameBorder="0"
-                  allow="encrypted-media; autoplay; fullscreen; picture-in-picture"
-                  allowFullScreen={true}
-                  playsInline={true}
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    maxHeight: '100vh',
-                    aspectRatio: '16 / 9',
-                    border: 'none',
-                    outline: 'none'
-                  }}
-                  onContextMenu={(e) => e.preventDefault()}
-                  onDragStart={(e) => e.preventDefault()}
-                  onSelectStart={(e) => e.preventDefault()}
-                  draggable={false}
-                />
+                {(selectedVideo.video_type === 'r2' || isR2Key(selectedVideo.video_ID)) ? (
+                  <R2VideoPlayer
+                    r2Key={selectedVideo.video_ID}
+                    videoId={selectedVideo._id}
+                    onComplete={handleR2VideoComplete}
+                  />
+                ) : (
+                  <iframe
+                    src={buildEmbedUrl(selectedVideo.video_ID || selectedVideo.video_ID_1 || '')}
+                    frameBorder="0"
+                    allow="encrypted-media; autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen={true}
+                    playsInline={true}
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      maxHeight: '100vh',
+                      aspectRatio: '16 / 9',
+                      border: 'none',
+                      outline: 'none'
+                    }}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onDragStart={(e) => e.preventDefault()}
+                    onSelectStart={(e) => e.preventDefault()}
+                    draggable={false}
+                  />
+                )}
               </div>
 
               {/* Video Description */}

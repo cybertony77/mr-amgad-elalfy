@@ -35,9 +35,9 @@ const DB_NAME = envConfig.DB_NAME || process.env.DB_NAME;
 
 // Helper function to generate VVC code (9 chars: 5 numbers, 2 uppercase, 2 lowercase)
 const generateVVCCode = () => {
-  const numbers = '0123456789';
-  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '123456789';
+  const uppercase = 'ABDEFGHJKMNPQRTUVWXYZ';
+  const lowercase = 'abdefghjkmnpqrtuvwxyz';
   
   // Generate 5 random numbers
   const numPart = Array.from({ length: 5 }, () => 

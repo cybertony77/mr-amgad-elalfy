@@ -377,6 +377,7 @@ export default function StudentDashboard() {
     const checkAvailableGroups = async () => {
       if (!studentId) {
         setHasAvailableGroups(false);
+        setWhatsAppGroups([]);
         return;
       }
       
@@ -384,9 +385,11 @@ export default function StudentDashboard() {
         const response = await apiClient.get('/api/join-whatsapp-group/student');
         const matchingGroups = response.data.groups || [];
         setHasAvailableGroups(matchingGroups.length > 0);
+        setWhatsAppGroups(matchingGroups); // Pre-cache groups for instant navigation
       } catch (error) {
         console.error('Error checking available groups:', error);
         setHasAvailableGroups(false);
+        setWhatsAppGroups([]);
       }
     };
     
@@ -396,6 +399,28 @@ export default function StudentDashboard() {
   const handleJoinWhatsAppGroup = async () => {
     if (!studentId) return;
     
+    // Use pre-cached groups for instant navigation (avoids popup blocker)
+    if (whatsAppGroups && whatsAppGroups.length > 0) {
+      if (whatsAppGroups.length === 1) {
+        // For single group, use direct navigation to avoid popup blocker
+        const link = whatsAppGroups[0].link;
+        try {
+          const newWindow = window.open(link, '_blank', 'noopener,noreferrer');
+          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+            // Fallback: use location.href if popup was blocked
+            window.location.href = link;
+          }
+        } catch (e) {
+          window.location.href = link;
+        }
+        return;
+      } else {
+        setShowWhatsAppPopup(true);
+        return;
+      }
+    }
+    
+    // Fallback: fetch groups if not pre-cached
     setWhatsappGroupsLoading(true);
     try {
       const response = await apiClient.get('/api/join-whatsapp-group/student');
@@ -403,15 +428,19 @@ export default function StudentDashboard() {
       console.log('Matching groups:', matchingGroups);
       setWhatsAppGroups(matchingGroups);
       
-      // If only one group, open it directly
       if (matchingGroups.length === 1) {
-        window.open(matchingGroups[0].link, '_blank', 'noopener,noreferrer');
+        // Use a temporary anchor element to bypass popup blockers for async context
+        const a = document.createElement('a');
+        a.href = matchingGroups[0].link;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       } else if (matchingGroups.length > 1) {
-        // If multiple groups, show popup
         console.log('Showing popup for', matchingGroups.length, 'groups');
         setShowWhatsAppPopup(true);
       } else {
-        // No matching groups - show premium popup
         setWhatsAppMessageContent({
           type: 'info',
           message: 'No WhatsApp groups available for your grade' + (studentData?.main_center ? ', center, and gender' : ' and gender') + '.'
@@ -431,7 +460,14 @@ export default function StudentDashboard() {
   };
 
   const handleJoinGroup = (link) => {
-    window.open(link, '_blank', 'noopener,noreferrer');
+    try {
+      const newWindow = window.open(link, '_blank', 'noopener,noreferrer');
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        window.location.href = link;
+      }
+    } catch (e) {
+      window.location.href = link;
+    }
   };
   
   // Calculate next session

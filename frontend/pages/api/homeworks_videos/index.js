@@ -110,7 +110,7 @@ export default async function handler(req, res) {
       }
 
       // Handle both old format (video_urls) and new format (videos array)
-      // Only YouTube is supported now
+      // YouTube and R2 video types are supported
       let videoData = {};
       
       if (videos && Array.isArray(videos) && videos.length > 0) {
@@ -121,12 +121,17 @@ export default async function handler(req, res) {
             if (video.video_type === 'youtube') {
               videoData[`video_ID_${index + 1}`] = video.video_id;
               videoData[`video_type_${index + 1}`] = 'youtube';
-              // Add video_name if provided
+              if (video.video_name && video.video_name.trim()) {
+                videoData[`video_name_${index + 1}`] = video.video_name.trim();
+              }
+            } else if (video.video_type === 'r2') {
+              videoData[`video_ID_${index + 1}`] = video.video_id;
+              videoData[`video_type_${index + 1}`] = 'r2';
               if (video.video_name && video.video_name.trim()) {
                 videoData[`video_name_${index + 1}`] = video.video_name.trim();
               }
             } else {
-              return res.status(400).json({ error: `Invalid video type at position ${index + 1}. Only YouTube is supported.` });
+              return res.status(400).json({ error: `Invalid video type at position ${index + 1}. Only YouTube and R2 are supported.` });
             }
           } else if (video && video.video_id) {
             // If no video_type specified, assume YouTube and extract ID from URL if needed
@@ -213,7 +218,7 @@ export default async function handler(req, res) {
       }
 
       // Handle both old format (video_urls) and new format (videos array)
-      // Only YouTube is supported now
+      // YouTube and R2 video types are supported
       let videoData = {};
       
       if (videos && Array.isArray(videos) && videos.length > 0) {
@@ -224,12 +229,17 @@ export default async function handler(req, res) {
             if (video.video_type === 'youtube') {
               videoData[`video_ID_${index + 1}`] = video.video_id;
               videoData[`video_type_${index + 1}`] = 'youtube';
-              // Add video_name if provided
+              if (video.video_name && video.video_name.trim()) {
+                videoData[`video_name_${index + 1}`] = video.video_name.trim();
+              }
+            } else if (video.video_type === 'r2') {
+              videoData[`video_ID_${index + 1}`] = video.video_id;
+              videoData[`video_type_${index + 1}`] = 'r2';
               if (video.video_name && video.video_name.trim()) {
                 videoData[`video_name_${index + 1}`] = video.video_name.trim();
               }
             } else {
-              return res.status(400).json({ error: `Invalid video type at position ${index + 1}. Only YouTube is supported.` });
+              return res.status(400).json({ error: `Invalid video type at position ${index + 1}. Only YouTube and R2 are supported.` });
             }
           } else if (video && video.video_id) {
             // If no video_type specified, assume YouTube and extract ID from URL if needed

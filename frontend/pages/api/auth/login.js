@@ -87,8 +87,9 @@ export default async function handler(req, res) {
       }
     }
 
-    // Check subscription status
-    const subscription = await db.collection('subscription').findOne({});
+    // Check subscription status (only if SYSTEM_SUBSCRIPTION is enabled)
+    const isSubscriptionEnabled = envConfig.SYSTEM_SUBSCRIPTION !== 'false'; // Default to true if not set
+    const subscription = isSubscriptionEnabled ? await db.collection('subscription').findOne({}) : null;
     if (subscription) {
       const now = new Date();
       const expirationDate = subscription.date_of_expiration ? new Date(subscription.date_of_expiration) : null;
