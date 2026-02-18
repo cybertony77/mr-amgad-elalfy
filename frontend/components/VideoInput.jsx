@@ -53,13 +53,13 @@ export default function VideoInput({
     // Validate file type
     const allowedTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
     if (!allowedTypes.includes(file.type)) {
-      setUploadError('Invalid file type. Please upload a video file (MP4, WebM, OGG, MOV, AVI, MKV).');
+      setUploadError('❌ Invalid file type. Please upload a video file (MP4, WebM, OGG, MOV, AVI, MKV).');
       return;
     }
 
     // Validate file size (max 5GB)
     if (file.size > 5 * 1024 * 1024 * 1024) {
-      setUploadError('File size exceeds 5GB limit.');
+      setUploadError('❌ File size exceeds 5GB limit.');
       return;
     }
 
@@ -188,7 +188,7 @@ export default function VideoInput({
               cursor: 'pointer'
             }}
           >
-            Remove
+            ❌ Remove
           </button>
         )}
       </div>
@@ -365,7 +365,7 @@ export default function VideoInput({
             }}>
               <div>
                 <div style={{ color: '#28a745', fontWeight: '600', fontSize: '0.9rem' }}>
-                  Uploaded successfully
+                  ✅ Uploaded successfully
                 </div>
                 <div style={{ color: '#666', fontSize: '0.85rem', marginTop: '2px' }}>
                   {uploadFileName}
@@ -384,7 +384,7 @@ export default function VideoInput({
                   cursor: 'pointer',
                 }}
               >
-                Remove
+                ❌ Remove
               </button>
             </div>
           )}
@@ -398,7 +398,7 @@ export default function VideoInput({
               backgroundColor: '#fff5f5',
             }}>
               <div style={{ color: '#dc3545', fontWeight: '500', fontSize: '0.9rem', marginBottom: '8px' }}>
-                Upload failed: {uploadError}
+                ❌ Upload failed: {uploadError}
               </div>
               <button
                 type="button"
