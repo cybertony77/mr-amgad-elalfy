@@ -46,13 +46,21 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
-  // Validate email format
+  if (typeof id !== 'string' && typeof id !== 'number') {
+    return res.status(400).json({ error: 'Invalid ID type' });
+  }
+  if (typeof email !== 'string' || typeof password !== 'string' || typeof VAC !== 'string') {
+    return res.status(400).json({ error: 'Invalid field types' });
+  }
+  if (typeof account_id !== 'string' && typeof account_id !== 'number') {
+    return res.status(400).json({ error: 'Invalid account_id type' });
+  }
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email.trim())) {
     return res.status(400).json({ error: 'Invalid email format' });
   }
 
-  // Validate password length
   if (password.length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }

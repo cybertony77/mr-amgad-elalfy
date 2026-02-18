@@ -43,18 +43,22 @@ export default async function handler(req, res) {
   if (!id) {
     return res.status(400).json({ error: 'ID is required' });
   }
+  if (typeof id !== 'string' && typeof id !== 'number') {
+    return res.status(400).json({ error: 'Invalid ID type' });
+  }
+
+  const safeId = String(id).replace(/[$]/g, '');
 
   let client;
   try {
     client = await MongoClient.connect(MONGO_URI);
     const db = client.db(DB_NAME);
 
-    // Check if user exists
-    const userId = /^\d+$/.test(id) ? Number(id) : id;
+    const userId = /^\d+$/.test(safeId) ? Number(safeId) : safeId;
     const user = await db.collection('users').findOne({
       $or: [
         { id: userId },
-        { id: id }
+        { id: safeId }
       ]
     });
 

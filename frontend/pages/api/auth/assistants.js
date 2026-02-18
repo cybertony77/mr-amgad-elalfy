@@ -156,34 +156,37 @@ export default async function handler(req, res) {
         res.json(mappedAssistants);
       }
     } else if (req.method === 'POST') {
-      // Create new assistant
       const { id, name, phone, email, password, role, account_state, ATCA } = req.body;
       if (!id || !name || !phone || !password || !role) {
         return res.status(400).json({ error: 'All fields are required' });
       }
+      if (typeof id !== 'string' || typeof name !== 'string' || typeof phone !== 'string' || typeof password !== 'string' || typeof role !== 'string') {
+        return res.status(400).json({ error: 'Invalid field types' });
+      }
       
-      // Validate email format if provided
       if (email && email.trim() !== '') {
+        if (typeof email !== 'string') return res.status(400).json({ error: 'Invalid email type' });
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email.trim())) {
           return res.status(400).json({ error: 'Invalid email format' });
         }
       }
       
-      const exists = await db.collection('users').findOne({ id });
+      const safeId = String(id).replace(/[$]/g, '');
+      const exists = await db.collection('users').findOne({ id: safeId });
       if (exists) {
         return res.status(409).json({ error: 'Assistant ID already exists' });
       }
       const hashedPassword = await bcrypt.hash(password, 10);
       const assistantData = { 
-        id, 
-        name, 
-        phone, 
-        email: email && email.trim() !== '' ? email.trim() : '',
+        id: safeId, 
+        name: String(name).replace(/[$]/g, ''), 
+        phone: String(phone).replace(/[$]/g, ''), 
+        email: email && typeof email === 'string' && email.trim() !== '' ? email.trim() : '',
         password: hashedPassword, 
-        role, 
-        account_state: account_state || "Activated", 
-        ATCA: ATCA || "no"
+        role: String(role).replace(/[$]/g, ''), 
+        account_state: (typeof account_state === 'string' ? account_state : "Activated"), 
+        ATCA: (typeof ATCA === 'string' ? ATCA : "no")
       };
       
       await db.collection('users').insertOne(assistantData);

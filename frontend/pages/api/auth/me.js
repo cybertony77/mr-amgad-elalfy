@@ -68,22 +68,20 @@ export default async function handler(req, res) {
         profile_picture: assistant.profile_picture || null
       });
     } else if (req.method === 'PUT') {
-      // Edit profile - handle partial updates properly
       const { name, id, phone, password, profile_picture, email } = req.body;
       
-      // Build update object with only defined values (not null or undefined)
       const update = {};
       
-      if (name !== undefined && name !== null && name.trim() !== '') {
-        update.name = name;
+      if (name !== undefined && name !== null && typeof name === 'string' && name.trim() !== '') {
+        update.name = name.replace(/[$]/g, '');
       }
-      if (id !== undefined && id !== null && id.trim() !== '') {
-        update.id = id;
+      if (id !== undefined && id !== null && typeof id === 'string' && id.trim() !== '') {
+        update.id = id.replace(/[$]/g, '');
       }
-      if (phone !== undefined && phone !== null && phone.trim() !== '') {
-        update.phone = phone;
+      if (phone !== undefined && phone !== null && typeof phone === 'string' && phone.trim() !== '') {
+        update.phone = phone.replace(/[$]/g, '');
       }
-      if (password !== undefined && password !== null && password.trim() !== '') {
+      if (password !== undefined && password !== null && typeof password === 'string' && password.trim() !== '') {
         update.password = await bcrypt.hash(password, 10);
       }
       if (email !== undefined) {

@@ -42,6 +42,12 @@ export default async function handler(req, res) {
   if (!account_id || !VAC) {
     return res.status(400).json({ error: 'account_id and VAC are required' });
   }
+  if (typeof account_id !== 'string' && typeof account_id !== 'number') {
+    return res.status(400).json({ error: 'Invalid account_id type' });
+  }
+  if (typeof VAC !== 'string') {
+    return res.status(400).json({ error: 'Invalid VAC type' });
+  }
 
   let client;
   try {

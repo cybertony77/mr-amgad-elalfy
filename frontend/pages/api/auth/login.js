@@ -46,11 +46,18 @@ export default async function handler(req, res) {
   if (!assistant_id || !password) {
     return res.status(400).json({ error: 'assistant_id and password required' });
   }
+  if (typeof assistant_id !== 'string' && typeof assistant_id !== 'number') {
+    return res.status(400).json({ error: 'Invalid assistant_id' });
+  }
+  if (typeof password !== 'string') {
+    return res.status(400).json({ error: 'Invalid password' });
+  }
+  const safeId = typeof assistant_id === 'number' ? assistant_id : String(assistant_id).replace(/[$]/g, '');
   let client;
   try {
     client = await MongoClient.connect(MONGO_URI);
     const db = client.db(DB_NAME);
-    const assistant = await db.collection('users').findOne({ id: assistant_id });
+    const assistant = await db.collection('users').findOne({ id: safeId });
     if (!assistant) {
       return res.status(401).json({ error: 'user_not_found' });
     }

@@ -51,18 +51,22 @@ export default async function handler(req, res) {
   if (!id || !sig) {
     return res.status(400).json({ error: 'ID and signature are required', valid: false });
   }
+  if ((typeof id !== 'string' && typeof id !== 'number') || typeof sig !== 'string') {
+    return res.status(400).json({ error: 'Invalid input types', valid: false });
+  }
+
+  const safeId = String(id).replace(/[$]/g, '');
 
   let client;
   try {
     client = await MongoClient.connect(MONGO_URI);
     const db = client.db(DB_NAME);
 
-    // Check if user exists
-    const userId = /^\d+$/.test(id) ? Number(id) : id;
+    const userId = /^\d+$/.test(safeId) ? Number(safeId) : safeId;
     const user = await db.collection('users').findOne({
       $or: [
         { id: userId },
-        { id: id }
+        { id: safeId }
       ]
     });
 

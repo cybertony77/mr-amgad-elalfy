@@ -64,8 +64,10 @@ export default async function handler(req, res) {
     if (!currentPassword) {
       return res.status(400).json({ error: 'Current password is required' });
     }
+    if (typeof currentPassword !== 'string') {
+      return res.status(400).json({ error: 'Invalid password type' });
+    }
     
-    // Compare the provided password with the stored hashed password
     const isValid = await bcrypt.compare(currentPassword.trim(), currentUser.password);
     
     if (!isValid) {
