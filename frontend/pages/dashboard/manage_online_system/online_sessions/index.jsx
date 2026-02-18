@@ -5,6 +5,7 @@ import Title from '../../../../components/Title';
 import AttendanceWeekSelect from '../../../../components/AttendanceWeekSelect';
 import GradeSelect from '../../../../components/GradeSelect';
 import OnlineSessionPaymentStateSelect from '../../../../components/OnlineSessionPaymentStateSelect';
+import R2VideoPlayer from '../../../../components/R2VideoPlayer';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../../lib/axios';
 import { useSystemConfig } from '../../../../lib/api/system';
@@ -939,25 +940,31 @@ export default function OnlineSessions() {
               onDragStart={(e) => e.preventDefault()}
               onSelectStart={(e) => e.preventDefault()}
             >
-              <iframe
-                src={buildEmbedUrl(selectedVideo.video_ID || selectedVideo.video_ID_1 || '')}
-                frameBorder="0"
-                allow="encrypted-media; autoplay; fullscreen; picture-in-picture"
-                allowFullScreen={true}
-                playsInline={true}
-                style={{
-                  width: '100%',
-                  height: 'auto',
-                  maxHeight: '100vh',
-                  aspectRatio: '16 / 9',
-                  border: 'none',
-                  outline: 'none'
-                }}
-                onContextMenu={(e) => e.preventDefault()}
-                onDragStart={(e) => e.preventDefault()}
-                onSelectStart={(e) => e.preventDefault()}
-                draggable={false}
-              />
+              {selectedVideo.video_type === 'r2' ? (
+                <R2VideoPlayer
+                  r2Key={selectedVideo.video_ID || selectedVideo.video_ID_1 || ''}
+                />
+              ) : (
+                <iframe
+                  src={buildEmbedUrl(selectedVideo.video_ID || selectedVideo.video_ID_1 || '')}
+                  frameBorder="0"
+                  allow="encrypted-media; autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen={true}
+                  playsInline={true}
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '100vh',
+                    aspectRatio: '16 / 9',
+                    border: 'none',
+                    outline: 'none'
+                  }}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onDragStart={(e) => e.preventDefault()}
+                  onSelectStart={(e) => e.preventDefault()}
+                  draggable={false}
+                />
+              )}
             </div>
 
             {/* Video Description */}

@@ -22,6 +22,7 @@ export default function HomeworkStart() {
   const warningShownRef = useRef(false);
   const isSubmittingRef = useRef(false); // Prevent duplicate submissions
   const startTimeRef = useRef(null); // Store start time as timestamp (milliseconds)
+  const shuffleMappingRef = useRef(null);
   const { data: profile } = useProfile();
 
   // Format date as MM/DD/YYYY at hour:minute:second AM/PM
@@ -492,6 +493,10 @@ export default function HomeworkStart() {
             
             // Only use text mapping if answer_texts have meaningful content
             // If answer_texts are all empty, treat as if there are no answer_texts (just compare by letter)
+            const hasMeaningfulAnswerTexts = originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts) && 
+              originalQ.answer_texts.length > 0 && 
+              originalQ.answer_texts.some(text => text && text.trim() !== '');
+            
             if (hasMeaningfulAnswerTexts && shuffleMapping && shuffleMapping.textOrder && shuffleMapping.textOrder[shuffledIdx] && questionItem && questionItem.answer_texts && Array.isArray(questionItem.answer_texts) && originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts)) {
               // Answers were shuffled - map student's selected answer back to original
               const textMapping = shuffleMapping.textOrder[shuffledIdx];

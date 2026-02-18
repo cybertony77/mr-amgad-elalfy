@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       // Create new quiz (always questions type)
-      const { lesson_name, timer, questions, week, grade, deadline_type, deadline_date, shuffle_questions_and_answers } = req.body;
+      const { lesson_name, timer, questions, week, grade, deadline_type, deadline_date, shuffle_questions_and_answers, show_details_after_submitting } = req.body;
 
       if (!grade || grade.trim() === '') {
         return res.status(400).json({ error: '❌ Grade is required' });
@@ -168,7 +168,7 @@ export default async function handler(req, res) {
     if (req.method === 'PUT') {
       // Update quiz (always questions type)
       const { id } = req.query;
-      const { lesson_name, timer, questions, week, grade, deadline_type, deadline_date, shuffle_questions_and_answers } = req.body;
+      const { lesson_name, timer, questions, week, grade, deadline_type, deadline_date, shuffle_questions_and_answers, show_details_after_submitting } = req.body;
 
       if (!id) {
         return res.status(400).json({ error: '❌ Quiz ID is required' });

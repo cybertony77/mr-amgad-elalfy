@@ -284,12 +284,9 @@ export default function HomeworkDetails() {
     // (already mapped back from shuffled view), so we can compare directly
     let isCorrect = false;
     if (studentAnswer && correctAnswer) {
-      // Direct comparison - stored answer is already in original format
-      if (correctAnswerText) {
-        // If correct answer has text, check both letter and text
-        isCorrect = studentAnswer === correctAnswer && studentAnswerText === correctAnswerText;
+      if (correctAnswerText && studentAnswerText) {
+        isCorrect = studentAnswerText === correctAnswerText;
       } else {
-        // If no text, just check letter
         isCorrect = studentAnswer === correctAnswer;
       }
     }

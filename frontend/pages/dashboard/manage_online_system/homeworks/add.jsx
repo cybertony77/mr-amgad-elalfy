@@ -501,6 +501,7 @@ export default function AddHomework() {
       homework_type: formData.homework_type,
       timer: formData.homework_type === 'questions' && formData.timer_type === 'with_timer' ? parseInt(formData.timer) : null,
       shuffle_questions_and_answers: formData.homework_type === 'questions' ? formData.shuffle_questions_and_answers : false,
+      show_details_after_submitting: formData.homework_type === 'questions' ? formData.show_details_after_submitting : false,
     };
 
     if (formData.homework_type === 'pages_from_book') {

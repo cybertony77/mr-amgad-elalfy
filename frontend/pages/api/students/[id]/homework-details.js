@@ -70,27 +70,11 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Homework not found' });
     }
 
-    // Check if show_details_after_submitting is enabled
-    if (homework.show_details_after_submitting !== true && homework.show_details_after_submitting !== 'true') {
-      return res.status(403).json({ error: 'Details are not available for this homework. The teacher has disabled showing details after submitting.' });
-    }
+    const showDetails = homework.show_details_after_submitting !== false && homework.show_details_after_submitting !== 'false';
 
     // Find result that matches this homework_id
-    // Normalize both to strings for comparison (handles ObjectId vs string mismatch)
     const onlineHomeworks = student.online_homeworks || [];
     const homeworkIdStr = String(homework_id);
-    
-    console.log('🔍 Searching for homework result:', {
-      student_id: student_id,
-      homework_id: homework_id,
-      homework_id_str: homeworkIdStr,
-      online_homeworks_count: onlineHomeworks.length,
-      online_homeworks_ids: onlineHomeworks.map(hw => ({
-        homework_id: hw.homework_id,
-        homework_id_type: typeof hw.homework_id,
-        homework_id_str: hw.homework_id ? String(hw.homework_id) : null
-      }))
-    });
     
     const matchingResult = onlineHomeworks.find(hw => {
       const hwIdStr = hw.homework_id ? String(hw.homework_id) : null;
@@ -98,25 +82,36 @@ export default async function handler(req, res) {
     });
     
     if (!matchingResult) {
-      console.log('❌ No matching result found');
-      // Return homework data even if no result exists, so frontend can handle gracefully
       return res.status(200).json({ 
         success: false,
-        homework: homework,
+        homework: showDetails ? homework : { _id: homework._id, lesson_name: homework.lesson_name, questions_count: homework.questions?.length || 0 },
         result: null,
         error: 'Homework result not found. You may not have completed this homework yet.',
-        hasResult: false
+        hasResult: false,
+        showDetails
       });
     }
-    
-    console.log('✅ Found matching result:', matchingResult);
 
-    // Return homework data and saved result
+    const homeworkData = showDetails ? homework : {
+      _id: homework._id,
+      lesson_name: homework.lesson_name,
+      timer: homework.timer,
+      week: homework.week,
+      questions: homework.questions?.map(q => ({
+        question_text: q.question_text,
+        question_picture: q.question_picture,
+        answers: q.answers,
+        answer_texts: q.answer_texts || [],
+      })),
+      questions_count: homework.questions?.length || 0
+    };
+
     res.json({ 
       success: true,
-      homework: homework,
+      homework: homeworkData,
       result: matchingResult,
-      hasResult: true
+      hasResult: true,
+      showDetails
     });
   } catch (error) {
     console.error('❌ Error fetching homework details:', error);

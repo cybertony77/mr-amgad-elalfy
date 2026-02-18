@@ -70,27 +70,11 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Quiz not found' });
     }
 
-    // Check if show_details_after_submitting is enabled
-    if (quiz.show_details_after_submitting !== true && quiz.show_details_after_submitting !== 'true') {
-      return res.status(403).json({ error: 'Details are not available for this quiz. The teacher has disabled showing details after submitting.' });
-    }
+    const showDetails = quiz.show_details_after_submitting !== false && quiz.show_details_after_submitting !== 'false';
 
     // Find result that matches this quiz_id
-    // Normalize both to strings for comparison (handles ObjectId vs string mismatch)
     const onlineQuizzes = student.online_quizzes || [];
     const quizIdStr = String(quiz_id);
-    
-    console.log('🔍 Searching for quiz result:', {
-      student_id: student_id,
-      quiz_id: quiz_id,
-      quiz_id_str: quizIdStr,
-      online_quizzes_count: onlineQuizzes.length,
-      online_quizzes_ids: onlineQuizzes.map(qz => ({
-        quiz_id: qz.quiz_id,
-        quiz_id_type: typeof qz.quiz_id,
-        quiz_id_str: qz.quiz_id ? String(qz.quiz_id) : null
-      }))
-    });
     
     const matchingResult = onlineQuizzes.find(qz => {
       const qzIdStr = qz.quiz_id ? String(qz.quiz_id) : null;
@@ -98,25 +82,37 @@ export default async function handler(req, res) {
     });
     
     if (!matchingResult) {
-      console.log('❌ No matching result found');
-      // Return quiz data even if no result exists, so frontend can handle gracefully
       return res.status(200).json({ 
         success: false,
-        quiz: quiz,
+        quiz: showDetails ? quiz : { _id: quiz._id, lesson_name: quiz.lesson_name, questions_count: quiz.questions?.length || 0 },
         result: null,
         error: 'Quiz result not found. You may not have completed this quiz yet.',
-        hasResult: false
+        hasResult: false,
+        showDetails
       });
     }
-    
-    console.log('✅ Found matching result:', matchingResult);
 
-    // Return quiz data and saved result
+    // If details are disabled, strip correct answers from quiz data
+    const quizData = showDetails ? quiz : {
+      _id: quiz._id,
+      lesson_name: quiz.lesson_name,
+      timer: quiz.timer,
+      week: quiz.week,
+      questions: quiz.questions?.map(q => ({
+        question_text: q.question_text,
+        question_picture: q.question_picture,
+        answers: q.answers,
+        answer_texts: q.answer_texts || [],
+      })),
+      questions_count: quiz.questions?.length || 0
+    };
+
     res.json({ 
       success: true,
-      quiz: quiz,
+      quiz: quizData,
       result: matchingResult,
-      hasResult: true
+      hasResult: true,
+      showDetails
     });
   } catch (error) {
     console.error('❌ Error fetching quiz details:', error);

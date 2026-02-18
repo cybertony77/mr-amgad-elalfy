@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Image from 'next/image';
 import Title from '../../components/Title';
@@ -181,6 +181,7 @@ export default function OnlineSessions() {
   const videoContainerRef = useRef(null);
   const videoStartTimeRef = useRef(null); // Track when video was opened
   const isClosingVideoRef = useRef(false); // Prevent multiple close calls
+  const r2CompletedRef = useRef(false); // Track if R2 video was completed (>= 90%)
   const [vvcPopupOpen, setVvcPopupOpen] = useState(false);
   const [vvc, setVvc] = useState('');
   const [vvcError, setVvcError] = useState('');
@@ -390,6 +391,7 @@ export default function OnlineSessions() {
         });
         setVideoPopupOpen(true);
         videoStartTimeRef.current = Date.now();
+        r2CompletedRef.current = false;
         setPendingVideo(null);
         setVvc('');
         
@@ -428,6 +430,12 @@ export default function OnlineSessions() {
     setVvc('');
     setVvcError('');
   };
+
+  // Handle R2 video completion (>= 90% watched)
+  const handleR2VideoComplete = useCallback(async (videoId, percent) => {
+    r2CompletedRef.current = true;
+    console.log(`[ONLINE SESSIONS] R2 video ${videoId} completed at ${Math.round(percent)}%`);
+  }, []);
 
   // Open video popup
   const openVideoPopup = async (session, videoId, videoIndex) => {
@@ -508,6 +516,7 @@ export default function OnlineSessions() {
       });
       setVideoPopupOpen(true);
       videoStartTimeRef.current = Date.now();
+      r2CompletedRef.current = false;
     } else {
       // Video is locked - require VVC
       setPendingVideo({ session, videoId, videoIndex, videoType });

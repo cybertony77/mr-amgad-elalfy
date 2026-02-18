@@ -412,7 +412,8 @@ export default function EditQuiz() {
         // If correct_answer is being set, format it properly based on answer_texts
         if (field === 'correct_answer') {
           const answerTexts = currentQuestion.answer_texts || [];
-          const answerLetter = value.toLowerCase();
+          const rawLetter = Array.isArray(value) ? value[0] : value;
+          const answerLetter = (typeof rawLetter === 'string' ? rawLetter : String(rawLetter || '')).toLowerCase();
           const answerLetterIdx = currentQuestion.answers.indexOf(answerLetter.toUpperCase());
           
           if (answerLetterIdx !== -1 && answerTexts[answerLetterIdx] && answerTexts[answerLetterIdx].trim() !== '') {
