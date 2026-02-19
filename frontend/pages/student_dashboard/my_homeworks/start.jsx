@@ -514,11 +514,6 @@ export default function HomeworkStart() {
                     const originalAnswerLetter = originalQ.answers[originalTextIdx]?.toLowerCase() || null;
                     const originalAnswerText = originalQ.answer_texts && originalQ.answer_texts[originalTextIdx] ? originalQ.answer_texts[originalTextIdx] : null;
                     
-                    // Check if answer_texts have actual content (not all empty strings)
-                    const hasMeaningfulAnswerTexts = originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts) && 
-                      originalQ.answer_texts.length > 0 && 
-                      originalQ.answer_texts.some(text => text && text.trim() !== '');
-                    
                     // Only use text comparison if answer_texts have meaningful content AND correctAnswerText exists and is not empty
                     const shouldCheckByText = hasMeaningfulAnswerTexts && correctAnswerText && correctAnswerText.trim() !== '';
                     
@@ -536,11 +531,6 @@ export default function HomeworkStart() {
               }
             } else {
               // No shuffling - direct comparison
-              // Check if answer_texts have actual content (not all empty strings)
-              const hasMeaningfulAnswerTexts = originalQ && originalQ.answer_texts && Array.isArray(originalQ.answer_texts) && 
-                originalQ.answer_texts.length > 0 && 
-                originalQ.answer_texts.some(text => text && text.trim() !== '');
-              
               // Only use text comparison if answer_texts have meaningful content AND correctAnswerText exists and is not empty
               const shouldCheckByText = hasMeaningfulAnswerTexts && correctAnswerText && correctAnswerText.trim() !== '';
               
