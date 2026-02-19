@@ -514,7 +514,7 @@ export default function HomeworksVideos() {
         <div style={{ textAlign: 'center', padding: '40px', color: '#6c757d' }}>Loading sessions...</div>
       ) : filteredSessions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#6c757d' }}>
-          {sessions.length === 0 ? 'No sessions yet. Add your first video!' : 'No sessions match your filters.'}
+          {sessions.length === 0 ? '❌ No sessions yet. Add your first video!' : '❌ No sessions match your filters.'}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

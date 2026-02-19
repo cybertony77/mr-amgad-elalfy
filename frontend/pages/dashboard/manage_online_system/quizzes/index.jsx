@@ -411,7 +411,7 @@ export default function Quizzes() {
           {/* Quizzes List */}
           {filteredQuizzes.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#6c757d' }}>
-              {quizzes.length === 0 ? '❌ No quizzes found. Click "Add Quiz" to create one.' : 'No quizzes match your filters.'}
+              {quizzes.length === 0 ? '❌ No quizzes found. Click "Add Quiz" to create one.' : '❌ No quizzes match your filters.'}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

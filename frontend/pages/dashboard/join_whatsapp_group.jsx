@@ -65,13 +65,14 @@ function GenderSelectWithBoth({ selectedGender, onGenderChange, isOpen, onToggle
           padding: '14px 16px',
           border: isOpen ? '2px solid #1FA8DC' : '2px solid #e9ecef',
           borderRadius: '10px',
-          backgroundColor: '#ffffff',
           cursor: 'pointer',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           fontSize: '1rem',
-          color: selectedGender ? '#000000' : '#adb5bd',
+          color: selectedGender ? '#1FA8DC' : '#adb5bd',
+          backgroundColor: selectedGender ? '#f0f8ff' : '#ffffff',
+          fontWeight: selectedGender ? '600' : '400',
           transition: 'all 0.3s ease',
           boxShadow: isOpen ? '0 0 0 3px rgba(31, 168, 220, 0.1)' : 'none'
         }}
@@ -118,7 +119,9 @@ function GenderSelectWithBoth({ selectedGender, onGenderChange, isOpen, onToggle
                 cursor: 'pointer',
                 borderBottom: '1px solid #f8f9fa',
                 transition: 'background-color 0.2s ease',
-                color: '#000000'
+                color: selectedGender === gender ? '#1FA8DC' : '#000000',
+                backgroundColor: selectedGender === gender ? '#f0f8ff' : '#ffffff',
+                fontWeight: selectedGender === gender ? '600' : '400'
               }}
               onClick={() => handleGenderSelect(gender)}
               onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}

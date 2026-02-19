@@ -411,7 +411,7 @@ export default function Homeworks() {
           {/* Homeworks List */}
           {filteredHomeworks.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#6c757d' }}>
-              {homeworks.length === 0 ? '❌ No homeworks found. Click "Add Homework" to create one.' : 'No homeworks match your filters.'}
+              {homeworks.length === 0 ? '❌ No homeworks found. Click "Add Homework" to create one.' : '❌ No homeworks match your filters.'}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
