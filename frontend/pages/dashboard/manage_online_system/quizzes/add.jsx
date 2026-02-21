@@ -52,6 +52,10 @@ export default function AddQuiz() {
       const response = await apiClient.get('/api/quizzes');
       return response.data;
     },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   const quizzes = quizzesData?.quizzes || [];

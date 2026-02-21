@@ -89,10 +89,10 @@ export default function EditHomework() {
       return homework;
     },
     enabled: !!id,
-    refetchInterval: false, // No auto-refresh - only manual refresh
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Don't refetch on mount if data exists
-    refetchOnReconnect: false, // Don't refetch on reconnect
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   // Fetch all homeworks for duplicate validation
@@ -102,6 +102,10 @@ export default function EditHomework() {
       const response = await apiClient.get('/api/homeworks');
       return response.data;
     },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   const homeworks = homeworksData?.homeworks || [];

@@ -63,6 +63,10 @@ export default function EditHomeworkVideo() {
       const response = await apiClient.get('/api/system/config');
       return response.data;
     },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
   const showUploadTab = systemConfig?.cloudflare_r2 === true;
 
@@ -73,6 +77,10 @@ export default function EditHomeworkVideo() {
       const response = await apiClient.get('/api/homeworks_videos');
       return response.data;
     },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   const sessions = sessionsData?.sessions || [];

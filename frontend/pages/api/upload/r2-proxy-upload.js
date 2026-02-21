@@ -33,32 +33,18 @@ function loadEnvConfig() {
   }
 }
 
-let cachedS3Client = null;
-let cachedBucketName = null;
+const envConfig = loadEnvConfig();
+const accountId = envConfig.CLOUDFLARE_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID;
+const accessKeyId = envConfig.R2_ACCESS_KEY_ID || process.env.R2_ACCESS_KEY_ID;
+const secretAccessKey = envConfig.R2_SECRET_ACCESS_KEY || process.env.R2_SECRET_ACCESS_KEY;
+const bucketName = envConfig.R2_BUCKET_NAME || process.env.R2_BUCKET_NAME;
 
-function getS3Client() {
-  if (cachedS3Client) return { client: cachedS3Client, bucketName: cachedBucketName };
-
-  const envConfig = loadEnvConfig();
-  const accountId = envConfig.CLOUDFLARE_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID;
-  const accessKeyId = envConfig.R2_ACCESS_KEY_ID || process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = envConfig.R2_SECRET_ACCESS_KEY || process.env.R2_SECRET_ACCESS_KEY;
-  const bucketName = envConfig.R2_BUCKET_NAME || process.env.R2_BUCKET_NAME;
-
-  if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
-    throw new Error('R2 configuration is missing');
-  }
-
-  cachedS3Client = new S3Client({
-    region: 'auto',
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId, secretAccessKey },
-    forcePathStyle: true,
-  });
-  cachedBucketName = bucketName;
-
-  return { client: cachedS3Client, bucketName: cachedBucketName };
-}
+const client = new S3Client({
+  region: 'auto',
+  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+  credentials: { accessKeyId, secretAccessKey },
+  forcePathStyle: true,
+});
 
 function parseForm(req) {
   return new Promise((resolve, reject) => {
@@ -91,8 +77,6 @@ export default async function handler(req, res) {
     if (!key) {
       return res.status(400).json({ error: 'key field is required' });
     }
-
-    const { client, bucketName } = getS3Client();
 
     const buffer = fs.readFileSync(file.filepath);
 

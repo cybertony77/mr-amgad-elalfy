@@ -44,21 +44,12 @@ const accessKeyId = envConfig.R2_ACCESS_KEY_ID || process.env.R2_ACCESS_KEY_ID;
 const secretAccessKey = envConfig.R2_SECRET_ACCESS_KEY || process.env.R2_SECRET_ACCESS_KEY;
 const bucketName = envConfig.R2_BUCKET_NAME || process.env.R2_BUCKET_NAME;
 
-// ─── Reusable S3 client (created once, reused across requests) ────────────────
-
-let s3Client = null;
-
-function getS3Client() {
-  if (!s3Client) {
-    s3Client = new S3Client({
-      region: 'auto',
-      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-      credentials: { accessKeyId, secretAccessKey },
-      forcePathStyle: true,
-    });
-  }
-  return s3Client;
-}
+const client = new S3Client({
+  region: 'auto',
+  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+  credentials: { accessKeyId, secretAccessKey },
+  forcePathStyle: true,
+});
 
 // ─── Content-Type mapping ─────────────────────────────────────────────────────
 
@@ -110,7 +101,6 @@ export default async function handler(req, res) {
   const objectKey = key.join('/');
 
   try {
-    const client = getS3Client();
     const rangeHeader = req.headers.range;
 
     // ── If Range request: fetch just that range ────────────────────────────

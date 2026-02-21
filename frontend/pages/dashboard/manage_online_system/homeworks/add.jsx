@@ -57,6 +57,10 @@ export default function AddHomework() {
       const response = await apiClient.get('/api/homeworks');
       return response.data;
     },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   const homeworks = homeworksData?.homeworks || [];

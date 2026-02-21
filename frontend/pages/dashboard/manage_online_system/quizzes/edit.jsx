@@ -84,10 +84,10 @@ export default function EditQuiz() {
       return quiz;
     },
     enabled: !!id,
-    refetchInterval: false, // No auto-refresh - only manual refresh
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Don't refetch on mount if data exists
-    refetchOnReconnect: false, // Don't refetch on reconnect
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   // Fetch all quizzes for duplicate validation
@@ -97,6 +97,10 @@ export default function EditQuiz() {
       const response = await apiClient.get('/api/quizzes');
       return response.data;
     },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   const quizzes = quizzesData?.quizzes || [];

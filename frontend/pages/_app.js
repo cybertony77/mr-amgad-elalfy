@@ -849,14 +849,14 @@ export default function App({ Component, pageProps }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 15 * 60 * 1000, // 15 minutes
+        staleTime: Infinity,
         gcTime: 20 * 60 * 1000, // 20 minutes
         retry: 3,
         retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-        refetchOnWindowFocus: true,
-        refetchOnReconnect: true,
-        refetchOnMount: true,
-        refetchInterval: false, // No auto-refresh - only manual refresh
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        refetchOnMount: false,
+        refetchInterval: false,
         refetchIntervalInBackground: false,
       },
       mutations: {
