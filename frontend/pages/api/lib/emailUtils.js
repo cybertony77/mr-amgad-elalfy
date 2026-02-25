@@ -114,7 +114,7 @@ function generateEmailHTML(name, role, driveLink) {
   let subject = '';
   
   if (role === 'student') {
-    subject = 'Welcome to Demo Attendance System!';
+    subject = `Welcome to ${SYSTEM_NAME}!`;
     
     if (!hasDriveLink) {
       mainContent = `

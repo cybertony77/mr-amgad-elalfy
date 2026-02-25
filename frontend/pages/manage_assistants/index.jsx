@@ -2,9 +2,12 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import Title from '../../components/Title';
+import { useSystemConfig } from '../../lib/api/system';
 
 export default function ManageAssistants() {
   const router = useRouter();
+  const { data: systemConfig } = useSystemConfig();
+  const isDeviceLimitationsEnabled = systemConfig?.device_limitations === true || systemConfig?.device_limitations === 'true';
 
   useEffect(() => {
     // Authentication is now handled by _app.js with HTTP-only cookies
@@ -132,6 +135,16 @@ export default function ManageAssistants() {
             <Image src="/trash2.svg" alt="Delete Assistant" width={20} height={20} />
             Delete Assistant
           </button>
+          {isDeviceLimitationsEnabled && (
+            <button
+              className="dashboard-btn"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              onClick={() => router.push('/manage_assistants/manage_assistants_devices')}
+            >
+              <Image src="/settings2.svg" alt="Manage Assistants Devices" width={20} height={20} />
+              Manage Assistants Devices
+            </button>
+          )}
       </div>
     </div>
   );

@@ -45,6 +45,7 @@ export default async function handler(req, res) {
     const quizzes = envConfig.SYSTEM_QUIZZES === 'true' || process.env.SYSTEM_QUIZZES === 'true';
     const cloudflareR2 = envConfig.SYSTEM_CLOUDFLARE_R2 === 'true' || process.env.SYSTEM_CLOUDFLARE_R2 === 'true';
     const subscription = envConfig.SYSTEM_SUBSCRIPTION !== 'false'; // Default to true if not set
+    const deviceLimitations = envConfig.SYSTEM_DEVICE_LIMITATIONS === 'true' || process.env.SYSTEM_DEVICE_LIMITATIONS === 'true';
     
     res.json({ 
       domain: systemDomain,
@@ -56,7 +57,8 @@ export default async function handler(req, res) {
       homeworks: homeworks,
       quizzes: quizzes,
       cloudflare_r2: cloudflareR2,
-      subscription: subscription
+      subscription: subscription,
+      device_limitations: deviceLimitations
     });
   } catch (error) {
     console.error('Error fetching system config:', error);

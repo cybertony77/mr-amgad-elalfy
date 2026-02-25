@@ -183,8 +183,7 @@ export default function MyQuizzes() {
       const response = await apiClient.get('/api/quizzes/student');
       return response.data;
     },
-    refetchInterval: 10 * 60 * 1000, // Auto-refresh every 10 minutes
-    refetchIntervalInBackground: false, // Don't refetch when tab is not active
+    // No auto refetch interval; fetch on mount/focus/reconnect only
     refetchOnWindowFocus: true, // Refetch on window focus
     refetchOnMount: true, // Refetch on mount
     refetchOnReconnect: true, // Refetch on reconnect
@@ -283,7 +282,7 @@ export default function MyQuizzes() {
       }
     },
     enabled: !!profile?.id,
-    refetchInterval: 10 * 60 * 1000, // Auto-refresh every 10 minutes
+    // No auto refetch interval; rely on focus/mount/reconnect + manual invalidation
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     refetchOnReconnect: true,

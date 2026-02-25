@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
+import UAParser from 'ua-parser-js';
 
 // Load environment variables from env.config
 function loadEnvConfig() {
@@ -35,6 +36,9 @@ const envConfig = loadEnvConfig();
 const JWT_SECRET = envConfig.JWT_SECRET || process.env.JWT_SECRET || 'topphysics_secret';
 const MONGO_URI = envConfig.MONGO_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/topphysics';
 const DB_NAME = envConfig.DB_NAME || process.env.DB_NAME || 'mr-george-magdy';
+const SUBSCRIPTION_ENABLED = envConfig.SYSTEM_SUBSCRIPTION === 'true' || process.env.SYSTEM_SUBSCRIPTION === 'true';
+const DEVICE_LIMITATIONS_ENABLED =
+  envConfig.SYSTEM_DEVICE_LIMITATIONS === 'true' || process.env.SYSTEM_DEVICE_LIMITATIONS === 'true';
 
 console.log('🔗 Using Mongo URI:', MONGO_URI);
 
@@ -42,7 +46,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  const { assistant_id, password } = req.body;
+  const { assistant_id, password, device_id } = req.body;
   if (!assistant_id || !password) {
     return res.status(400).json({ error: 'assistant_id and password required' });
   }
@@ -96,61 +100,162 @@ export default async function handler(req, res) {
 
     // Check subscription status (only if SYSTEM_SUBSCRIPTION is enabled)
     const isSubscriptionEnabled = envConfig.SYSTEM_SUBSCRIPTION !== 'false'; // Default to true if not set
-    const subscription = isSubscriptionEnabled ? await db.collection('subscription').findOne({}) : null;
-    if (subscription) {
-      const now = new Date();
-      const expirationDate = subscription.date_of_expiration ? new Date(subscription.date_of_expiration) : null;
-      
-      // Compare full datetime (year, month, day, hour, minute, second) before deactivating
-      if (expirationDate && subscription.active) {
-        // Compare all datetime components to ensure accurate expiration check
-        const nowTime = now.getTime();
-        const expTime = expirationDate.getTime();
+    if (SUBSCRIPTION_ENABLED) {
+      const subscription = await db.collection('subscription').findOne({});
+      if (subscription) {
+        const now = new Date();
+        const expirationDate = subscription.date_of_expiration ? new Date(subscription.date_of_expiration) : null;
         
-        // Only deactivate if current time has passed expiration time
-        if (nowTime >= expTime) {
-          console.log('⏰ Subscription expiration time reached, deactivating...');
-          await db.collection('subscription').updateOne(
-            {},
-            { 
-              $set: { 
-                active: false,
-                subscription_duration: null,
-                date_of_subscription: null,
-                date_of_expiration: null,
-                cost: null,
-                note: null
-              } 
-            }
-          );
-          subscription.active = false;
+        // Compare full datetime (year, month, day, hour, minute, second) before deactivating
+        if (expirationDate && subscription.active) {
+          // Compare all datetime components to ensure accurate expiration check
+          const nowTime = now.getTime();
+          const expTime = expirationDate.getTime();
+          
+          // Only deactivate if current time has passed expiration time
+          if (nowTime >= expTime) {
+            console.log('⏰ Subscription expiration time reached, deactivating...');
+            await db.collection('subscription').updateOne(
+              {},
+              { 
+                $set: { 
+                  active: false,
+                  subscription_duration: null,
+                  date_of_subscription: null,
+                  date_of_expiration: null,
+                  cost: null,
+                  note: null
+                } 
+              }
+            );
+            subscription.active = false;
+          }
         }
-      }
 
-      // If subscription is inactive, only allow developers and students
-      if (!subscription.active) {
-        if (assistant.role !== 'developer' && assistant.role !== 'student') {
-          return res.status(403).json({ 
-            error: 'subscription_inactive',
-            message: 'Access unavailable: Subscription expired. Please contact Tony Joseph (developer) to renew.' 
-          });
-        }
-      } else if (subscription.active && expirationDate) {
-        // If subscription is active, check if expiration date/time has passed
-        const nowTime = now.getTime();
-        const expTime = expirationDate.getTime();
-        
-        if (nowTime >= expTime) {
-          // Subscription expired, only allow developers and students
+        // If subscription is inactive, only allow developers and students
+        if (!subscription.active) {
           if (assistant.role !== 'developer' && assistant.role !== 'student') {
             return res.status(403).json({ 
-              error: 'subscription_expired',
+              error: 'subscription_inactive',
               message: 'Access unavailable: Subscription expired. Please contact Tony Joseph (developer) to renew.' 
             });
           }
+        } else if (subscription.active && expirationDate) {
+          // If subscription is active, check if expiration date/time has passed
+          const nowTime = now.getTime();
+          const expTime = expirationDate.getTime();
+          
+          if (nowTime >= expTime) {
+            // Subscription expired, only allow developers and students
+            if (assistant.role !== 'developer' && assistant.role !== 'student') {
+              return res.status(403).json({ 
+                error: 'subscription_expired',
+                message: 'Access unavailable: Subscription expired. Please contact Tony Joseph (developer) to renew.' 
+              });
+            }
+          }
+          // If expiration time > current time, allow login
         }
-        // If expiration time > current time, allow login
       }
+    }
+
+    // Device limitations logic (only if enabled and role is NOT developer)
+    if (DEVICE_LIMITATIONS_ENABLED && assistant.role !== 'developer') {
+      const now = new Date();
+      const nowFormatted = formatDateTime(now);
+
+      // Derive device id (fallback to a deterministic string if missing)
+      const incomingDeviceId =
+        (typeof device_id === 'string' && device_id.trim() !== '')
+          ? device_id.trim()
+          : 'unknown-device';
+
+      // Derive IP from headers / socket
+      const forwardedFor = req.headers['x-forwarded-for'];
+      const ipFromHeader = Array.isArray(forwardedFor)
+        ? forwardedFor[0]
+        : (forwardedFor || '').split(',')[0].trim();
+      const ip =
+        ipFromHeader ||
+        (req.socket && req.socket.remoteAddress) ||
+        'unknown';
+
+      // Parse user-agent for browser / OS / device type
+      const userAgent = req.headers['user-agent'] || '';
+      let browser = 'Unknown';
+      let os = 'Unknown';
+      let deviceType = 'desktop';
+
+      try {
+        const parser = new UAParser(userAgent);
+        const result = parser.getResult();
+        if (result.browser && result.browser.name) {
+          browser = result.browser.name;
+        }
+        if (result.os && result.os.name) {
+          os = result.os.name;
+        }
+        if (result.device && result.device.type) {
+          deviceType = result.device.type;
+        }
+      } catch (parseErr) {
+        // Keep defaults if parsing fails
+      }
+
+      const existingLimitations = assistant.device_limitations || {};
+      const allowedDevices =
+        typeof existingLimitations.allowed_devices === 'number'
+          ? existingLimitations.allowed_devices
+          : 1;
+
+      const devices = Array.isArray(existingLimitations.devices)
+        ? [...existingLimitations.devices]
+        : [];
+
+      const existingIndex = devices.findIndex(
+        (d) => d && d.device_id === incomingDeviceId
+      );
+
+      // If device not registered yet, enforce limit
+      if (existingIndex === -1) {
+        if (devices.length >= allowedDevices) {
+          // Block login when maximum number of devices is reached
+          return res.status(403).json({
+            error: 'device_limit_reached',
+          });
+        }
+
+        devices.push({
+          device_id: incomingDeviceId,
+          ip,
+          browser,
+          os,
+          device_type: deviceType,
+          first_login: nowFormatted,
+          last_login: nowFormatted,
+        });
+      } else {
+        // Update last_login for existing device
+        devices[existingIndex] = {
+          ...devices[existingIndex],
+          ip: devices[existingIndex].ip || ip,
+          browser: devices[existingIndex].browser || browser,
+          os: devices[existingIndex].os || os,
+          device_type: devices[existingIndex].device_type || deviceType,
+          last_login: nowFormatted,
+        };
+      }
+
+      const updatedLimitations = {
+        allowed_devices: allowedDevices,
+        last_login: nowFormatted,
+        devices,
+      };
+
+      await db.collection('users').updateOne(
+        { _id: assistant._id },
+        { $set: { device_limitations: updatedLimitations } }
+      );
     }
     
     const token = jwt.sign(

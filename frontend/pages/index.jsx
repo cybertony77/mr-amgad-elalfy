@@ -22,10 +22,38 @@ export default function Login() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [devToolsDetected, setDevToolsDetected] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [deviceId, setDeviceId] = useState(null);
   const router = useRouter();
   
   // React Query login mutation
   const loginMutation = useLogin();
+
+  // Initialize device_id for this browser (only persist later for non-developers)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      let storedId = localStorage.getItem('mr_amgad_elalfy_device_id');
+      if (storedId) {
+        // Reuse existing device id if it was previously stored (non-developer login)
+        setDeviceId(storedId);
+      } else {
+        // Generate an in-memory device id candidate; will only be saved
+        // to localStorage after a successful non-developer login
+        let generatedId;
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+          generatedId = window.crypto.randomUUID();
+        } else {
+          generatedId = `dev-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+        setDeviceId(generatedId);
+      }
+    } catch (e) {
+      // If localStorage is unavailable, fall back to an in-memory id
+      const fallbackId = `dev-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      setDeviceId(fallbackId);
+    }
+  }, []);
 
   // DevTools detection on login page (show for ALL users including developers)
   useEffect(() => {
@@ -502,10 +530,6 @@ export default function Login() {
     setUsernameError("");
     setPasswordError("");
 
-    // Don't block login - let it proceed
-    // DevToolsProtection in _app.js will handle protection after login
-    // and will bypass for developers
-
     // Trim whitespaces from username before sending
     const trimmedUsername = assistant_id.trim();
     // If it's a pure numeric ID, send it as a Number (e.g. 1, not "1")
@@ -514,11 +538,22 @@ export default function Login() {
       : trimmedUsername;
 
     loginMutation.mutate(
-      { assistant_id: assistantIdForRequest, password },
+      { assistant_id: assistantIdForRequest, password, device_id: deviceId || null },
       {
         onSuccess: (data) => {
           // Set user role for devtools check
           setUserRole(data.role);
+          
+          // Persist device_id only for non-developer roles
+          if (typeof window !== 'undefined') {
+            try {
+              if (data.role !== 'developer' && deviceId) {
+                localStorage.setItem('mr_amgad_elalfy_device_id', deviceId);
+              }
+            } catch (e) {
+              // Ignore storage errors
+            }
+          }
           
           // Remove all sessionStorage items after successful login
           if (typeof window !== 'undefined') {
@@ -532,7 +567,6 @@ export default function Login() {
           const cookies = document.cookie.split(';');
           const redirectCookie = cookies.find(cookie => cookie.trim().startsWith('redirectAfterLogin='));
           const redirectPath = redirectCookie ? redirectCookie.split('=')[1] : null;
-          console.log("🔍 Redirect path found:", redirectPath);
           
           // Determine redirect destination based on role
           const userRole = data.role;
@@ -543,12 +577,10 @@ export default function Login() {
             if (redirectPath && redirectPath !== "/" && redirectPath !== "/dashboard" && redirectPath !== "/student_dashboard") {
               // Clear the redirect cookie and redirect to intended page
               document.cookie = "redirectAfterLogin=; path=/; max-age=0";
-              console.log("🔄 Redirecting to:", redirectPath);
               // Use window.location for more reliable redirect
               window.location.href = redirectPath;
             } else {
               // Default redirect based on role
-              console.log(`🔄 Redirecting to ${defaultDashboard} for role: ${userRole}`);
               window.location.href = defaultDashboard;
             }
           }, 100);
@@ -567,6 +599,8 @@ export default function Login() {
             setMessage("Access unavailable: This account is deactivated. Please contact Tony Joseph (developer).");
           } else if (err.response?.data?.error === 'student_account_deactivated') {
             setMessage("student_account_deactivated"); // Special marker for custom rendering
+          } else if (err.response?.data?.error === 'device_limit_reached') {
+            setMessage("device_limit_reached");
           } else if (err.response?.data?.error === 'subscription_inactive' || err.response?.data?.error === 'subscription_expired') {
             setMessage(err.response?.data?.message || "Access unavailable: Subscription expired. Please contact Tony Joseph (developer) to renew.");
           } else {
@@ -1014,6 +1048,41 @@ export default function Login() {
                 {message === 'student_account_deactivated' ? (
                   <span>
                     Access unavailable: This account is deactivated. Please contact{' '}
+                    <a
+                      href="/contact_assistants"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push('/contact_assistants');
+                      }}
+                      style={{
+                        color: 'white',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        fontWeight: 700
+                      }}
+                    >
+                      assistants
+                    </a>
+                    {' '}or{' '}
+                    <a
+                      href="/contact_developer"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push('/contact_developer');
+                      }}
+                      style={{
+                        color: 'white',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        fontWeight: 700
+                      }}
+                    >
+                      developer
+                    </a>
+                  </span>
+                ) : message === 'device_limit_reached' ? (
+                  <span>
+                    Access unavailable: You have reached the maximum number of allowed devices for your account. Contact{' '}
                     <a
                       href="/contact_assistants"
                       onClick={(e) => {

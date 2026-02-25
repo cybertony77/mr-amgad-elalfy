@@ -95,28 +95,55 @@ export default function SignUp() {
   };
 
   const handleVACChange = (e, index) => {
-    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+    const rawValue = e.target.value;
+    const value = rawValue.replace(/[^a-zA-Z0-9]/g, '');
 
-    if (value.length > 1) {
-      const pastedCode = value.slice(0, 7).split('');
+    if (!value) {
       const newVac = [...form.vac];
-      for (let i = 0; i < pastedCode.length && (index + i) < 7; i++) {
-        newVac[index + i] = pastedCode[i];
-      }
+      newVac[index] = '';
       setForm({ ...form, vac: newVac });
-      setError('');
-      const lastIndex = Math.min(index + pastedCode.length - 1, 6);
-      vacInputRefs.current[lastIndex]?.focus();
       return;
     }
 
     const newVac = [...form.vac];
+
+    // 🔥 If full code pasted into first input
+    if (value.length >= 7 && index === 0) {
+      const chars = value.slice(0, 7).split('');
+      setForm({ ...form, vac: chars });
+
+      setTimeout(() => {
+        const lastInput = document.querySelector(`input[name="vac-6"]`);
+        if (lastInput) lastInput.focus();
+      }, 0);
+
+      return;
+    }
+
+    // 🔥 If multiple characters pasted (partial paste)
+    if (value.length > 1) {
+      for (let i = 0; i < value.length && index + i < 7; i++) {
+        newVac[index + i] = value[i];
+      }
+
+      setForm({ ...form, vac: newVac });
+
+      const nextIndex = Math.min(index + value.length, 6);
+      setTimeout(() => {
+        const nextInput = document.querySelector(`input[name="vac-${nextIndex}"]`);
+        if (nextInput) nextInput.focus();
+      }, 0);
+
+      return;
+    }
+
+    // Normal single character
     newVac[index] = value;
     setForm({ ...form, vac: newVac });
-    setError('');
 
-    if (value && index < 6) {
-      vacInputRefs.current[index + 1]?.focus();
+    if (index < 6) {
+      const nextInput = document.querySelector(`input[name="vac-${index + 1}"]`);
+      if (nextInput) nextInput.focus();
     }
   };
 
@@ -834,10 +861,10 @@ export default function SignUp() {
                   name={`vac-${index}`}
                   className={`vac-input ${!vacChecking && vacCheck && !vacCheck.valid && form.id && form.vac.join('').length === 7 ? 'error-border' : ''}`}
                   type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
                   autoComplete="one-time-code"
-                  maxLength={1}
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  spellCheck={false}
                   value={char}
                   onChange={(e) => handleVACChange(e, index)}
                   onKeyDown={(e) => handleKeyDown(e, index)}

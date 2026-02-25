@@ -13,6 +13,7 @@ export default function ManageOnlineSystem() {
   const isHomeworksVideosEnabled = systemConfig?.homeworks_videos === true || systemConfig?.homeworks_videos === 'true';
   const isHomeworksEnabled = systemConfig?.homeworks === true || systemConfig?.homeworks === 'true';
   const isQuizzesEnabled = systemConfig?.quizzes === true || systemConfig?.quizzes === 'true';
+  const isDeviceLimitationsEnabled = systemConfig?.device_limitations === true || systemConfig?.device_limitations === 'true';
   const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
@@ -371,6 +372,16 @@ export default function ManageOnlineSystem() {
             >
               <Image src="/notepad.svg" alt="Preview Quizzes" width={20} height={20} />
               Preview Student Quizzes
+            </button>
+          )}
+
+          {isDeviceLimitationsEnabled && (
+            <button
+              className="dashboard-btn"
+              onClick={() => router.push("/dashboard/manage_online_system/manage_students_devices")}
+            >
+              <Image src="/settings2.svg" alt="Manage Students Devices" width={20} height={20} />
+              Manage Students Devices
             </button>
           )}
 
