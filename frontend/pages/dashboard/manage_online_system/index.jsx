@@ -346,6 +346,16 @@ export default function ManageOnlineSystem() {
             Change Student Account Password
           </button>
 
+          {isDeviceLimitationsEnabled && (
+            <button
+              className="dashboard-btn"
+              onClick={() => router.push("/dashboard/manage_online_system/manage_students_devices")}
+            >
+              <Image src="/settings2.svg" alt="Manage Students Devices" width={20} height={20} />
+              Manage Students Devices
+            </button>
+          )}
+
           <button
             className="dashboard-btn"
             onClick={() => router.push("/dashboard/manage_online_system/delete_student_account")}
@@ -372,16 +382,6 @@ export default function ManageOnlineSystem() {
             >
               <Image src="/notepad.svg" alt="Preview Quizzes" width={20} height={20} />
               Preview Student Quizzes
-            </button>
-          )}
-
-          {isDeviceLimitationsEnabled && (
-            <button
-              className="dashboard-btn"
-              onClick={() => router.push("/dashboard/manage_online_system/manage_students_devices")}
-            >
-              <Image src="/settings2.svg" alt="Manage Students Devices" width={20} height={20} />
-              Manage Students Devices
             </button>
           )}
 

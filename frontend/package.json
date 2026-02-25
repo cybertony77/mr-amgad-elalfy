@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p 3700",
+    "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
@@ -41,7 +41,8 @@
     "react-qr-code": "^2.0.18",
     "react-qrcode-logo": "^3.0.0",
     "recharts": "^3.6.0",
-    "resend": "^6.6.0"
+    "resend": "^6.6.0",
+    "ua-parser-js": "^1.0.37"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

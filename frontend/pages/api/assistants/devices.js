@@ -35,8 +35,17 @@ const MONGO_URI =
   envConfig.MONGO_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/topphysics';
 const DB_NAME = envConfig.DB_NAME || process.env.DB_NAME || 'mr-george-magdy';
 const DEVICE_LIMITATIONS_ENABLED =
-  envConfig.SYSTEM_DEVICE_LIMITATIONS === 'true' ||
-  process.env.SYSTEM_DEVICE_LIMITATIONS === 'true';
+  String(envConfig.SYSTEM_DEVICE_LIMITATIONS || '').toLowerCase().trim() === 'true' ||
+  String(process.env.SYSTEM_DEVICE_LIMITATIONS || '').toLowerCase().trim() === 'true';
+
+// Debug logging (can be removed after fixing)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('🔍 Device Limitations Debug:', {
+    envConfigValue: envConfig.SYSTEM_DEVICE_LIMITATIONS,
+    processEnvValue: process.env.SYSTEM_DEVICE_LIMITATIONS,
+    enabled: DEVICE_LIMITATIONS_ENABLED,
+  });
+}
 
 // Format date as DD/MM/YYYY at HH:MM AM/PM
 function formatDateTime(date) {
