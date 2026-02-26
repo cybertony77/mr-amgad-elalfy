@@ -37,8 +37,30 @@ const JWT_SECRET = envConfig.JWT_SECRET || process.env.JWT_SECRET || 'topphysics
 const MONGO_URI = envConfig.MONGO_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/topphysics';
 const DB_NAME = envConfig.DB_NAME || process.env.DB_NAME || 'mr-george-magdy';
 const SUBSCRIPTION_ENABLED = envConfig.SYSTEM_SUBSCRIPTION === 'true' || process.env.SYSTEM_SUBSCRIPTION === 'true';
-const DEVICE_LIMITATIONS_ENABLED =
-  envConfig.SYSTEM_DEVICE_LIMITATIONS === 'true' || process.env.SYSTEM_DEVICE_LIMITATIONS === 'true';
+
+// Helper to dynamically check if device limitations are enabled on each request
+function isDeviceLimitationsEnabled() {
+  try {
+    const latestEnv = loadEnvConfig();
+    const rawValue = latestEnv.SYSTEM_DEVICE_LIMITATIONS || process.env.SYSTEM_DEVICE_LIMITATIONS;
+    const normalized = String(rawValue || '').toLowerCase().trim();
+    const enabled = normalized === 'true' || normalized === '1';
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔐 Device Limitations (login):', {
+        envConfigValue: latestEnv.SYSTEM_DEVICE_LIMITATIONS,
+        processEnvValue: process.env.SYSTEM_DEVICE_LIMITATIONS,
+        normalized,
+        enabled,
+      });
+    }
+
+    return enabled;
+  } catch (e) {
+    console.log('⚠️  Failed to determine device limitations state, defaulting to disabled', e);
+    return false;
+  }
+}
 
 // Format date as DD/MM/YYYY at HH:MM AM/PM in Egypt/Cairo timezone
 function formatDateTime(date) {
@@ -219,7 +241,7 @@ export default async function handler(req, res) {
     }
 
     // Device limitations logic (only if enabled and role is NOT developer)
-    if (DEVICE_LIMITATIONS_ENABLED && assistant.role !== 'developer') {
+    if (isDeviceLimitationsEnabled() && assistant.role !== 'developer') {
       const now = new Date();
       const nowFormatted = formatDateTime(now);
 
