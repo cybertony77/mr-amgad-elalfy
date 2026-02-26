@@ -251,7 +251,7 @@ export default function ManageStudentsDevices() {
 
   return (
     <div className="page-wrapper" style={{ padding: "20px 5px 20px 5px" }}>
-      <div className="main-container" style={{ maxWidth: 1000, margin: "40px auto", padding: "25px" }}>
+      <div className="main-container" style={{ maxWidth: 800, margin: "auto", padding: "20px 5px" }}>
         <style jsx>{`
           .page-wrapper {
             padding: 20px 5px 20px 5px;
