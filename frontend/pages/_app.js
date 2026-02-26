@@ -1179,14 +1179,33 @@ export default function App({ Component, pageProps }) {
 
   // Fetch subscription data when authenticated (only if subscription system is enabled)
   useEffect(() => {
-    const fetchSubscription = async () => {
+    // Routes where subscription polling should be disabled (but still allow initial fetch)
+    const skipSubscriptionPollingRoutes = [
+      '/dashboard/manage_online_system/online_sessions',
+      '/dashboard/manage_online_system/homeworks',
+      '/dashboard/manage_online_system/quizzes'
+    ];
+    
+    // Check if current route should skip subscription polling
+    const shouldSkipPolling = router.pathname.startsWith('/student_dashboard') || 
+                             skipSubscriptionPollingRoutes.includes(router.pathname);
+    
+    // Students don't need subscription data at all, so skip entirely on student_dashboard
+    const shouldSkipEntirely = router.pathname.startsWith('/student_dashboard');
+    
+    let isInitialLoad = true; // Track if this is the first load
+    
+    const fetchSubscription = async (isBackgroundPoll = false) => {
       if (!isSubscriptionEnabled || !isAuthenticated || publicPages.includes(router.pathname)) {
         setSubscription(null);
         return;
       }
 
       try {
-        setIsLoadingSubscription(true);
+        // Only show loading spinner on initial load, not during background polling
+        if (!isBackgroundPoll) {
+          setIsLoadingSubscription(true);
+        }
         const response = await apiClient.get('/api/subscription');
         setSubscription(response.data);
       } catch (error) {
@@ -1199,15 +1218,35 @@ export default function App({ Component, pageProps }) {
         setSubscription(null);
         }
       } finally {
-        setIsLoadingSubscription(false);
+        // Only clear loading spinner if it was set (not during background polling)
+        if (!isBackgroundPoll) {
+          setIsLoadingSubscription(false);
+        }
       }
     };
 
-    // Initial fetch
-    fetchSubscription();
+    // Skip subscription entirely on student_dashboard (students don't need it)
+    if (shouldSkipEntirely) {
+      setSubscription(null);
+      setIsLoadingSubscription(false);
+      return;
+    }
+
+    // On routes that should skip polling, only do initial fetch (no 30-minute interval)
+    if (shouldSkipPolling) {
+      // Initial fetch only (no polling)
+      fetchSubscription(false);
+      return;
+    }
+
+    // Normal behavior: initial fetch + 30-minute polling
+    // Initial fetch (with loading spinner)
+    fetchSubscription(false);
+    isInitialLoad = false;
     
     // Manual control: Refetch subscription every 30 minutes (reduced frequency)
-    const interval = setInterval(fetchSubscription, 30 * 60 * 1000);
+    // Pass true to indicate this is a background poll (no loading spinner)
+    const interval = setInterval(() => fetchSubscription(true), 30 * 60 * 1000);
     
     return () => clearInterval(interval);
   }, [isAuthenticated, isSubscriptionEnabled, router.pathname, publicPages]);

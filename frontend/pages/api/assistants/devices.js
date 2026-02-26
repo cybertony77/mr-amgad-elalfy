@@ -250,18 +250,32 @@ export default async function handler(req, res) {
 
     if (req.method === 'PATCH') {
       const { id, allowed_devices } = req.body;
-      const numericId = parseInt(id, 10);
-      const allowed = parseInt(allowed_devices, 10);
 
-      if (!numericId || Number.isNaN(numericId)) {
+      if (!id) {
         return res.status(400).json({ error: 'invalid_id' });
       }
+
+      const allowed = parseInt(allowed_devices, 10);
       if (!Number.isFinite(allowed) || allowed <= 0) {
         return res.status(400).json({ error: 'invalid_allowed_devices' });
       }
 
+      // Support both numeric and string assistant IDs
+      let idQuery;
+      if (typeof id === 'number') {
+        idQuery = id;
+      } else {
+        const idStr = String(id).replace(/[$]/g, '').trim();
+        if (/^\d+$/.test(idStr)) {
+          const numericId = parseInt(idStr, 10);
+          idQuery = { $in: [numericId, idStr] };
+        } else {
+          idQuery = idStr;
+        }
+      }
+
       await db.collection('users').updateOne(
-        { id: numericId, role: { $in: ['assistant', 'admin'] } },
+        { id: idQuery, role: { $in: ['assistant', 'admin'] } },
         {
           $set: {
             'device_limitations.allowed_devices': allowed,
@@ -274,14 +288,28 @@ export default async function handler(req, res) {
 
     if (req.method === 'DELETE') {
       const { id, device_id } = req.query;
-      const numericId = parseInt(id, 10);
 
-      if (!numericId || Number.isNaN(numericId) || !device_id) {
+      if (!id || !device_id) {
         return res.status(400).json({ error: 'invalid_parameters' });
       }
 
+      // Support both numeric and string assistant IDs
+      let idQuery;
+      const rawId = Array.isArray(id) ? id[0] : id;
+      if (typeof rawId === 'number') {
+        idQuery = rawId;
+      } else {
+        const idStr = String(rawId).replace(/[$]/g, '').trim();
+        if (/^\d+$/.test(idStr)) {
+          const numericId = parseInt(idStr, 10);
+          idQuery = { $in: [numericId, idStr] };
+        } else {
+          idQuery = idStr;
+        }
+      }
+
       await db.collection('users').updateOne(
-        { id: numericId, role: { $in: ['assistant', 'admin'] } },
+        { id: idQuery, role: { $in: ['assistant', 'admin'] } },
         {
           $pull: {
             'device_limitations.devices': { device_id },

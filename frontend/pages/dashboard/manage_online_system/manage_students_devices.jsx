@@ -73,7 +73,7 @@ export default function ManageStudentsDevices() {
       search: searchTerm.trim() || undefined,
     },
     {
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false, // Disabled to prevent auto-refresh on window focus
       staleTime: 2 * 60 * 1000,
     }
   );

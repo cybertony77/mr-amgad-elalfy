@@ -80,12 +80,12 @@ export default function QR() {
   // React Query hooks with enhanced real-time updates
   const { data: rawStudent, isLoading: studentLoading, error: studentError, refetch: refetchStudent } = useStudent(searchId, { 
     enabled: !!searchId,
-    // Optimized for fast error responses
-    refetchInterval: 30 * 60 * 1000, // Refetch every 30 minutes
-    refetchIntervalInBackground: false, // Don't refetch when tab is not active
-    refetchOnWindowFocus: true, // Immediate update when switching back to tab
-    staleTime: 0, // Always consider data stale for immediate updates
-    gcTime: 1000, // Keep in cache for only 1 second to force fresh data
+    // Optimized for fast error responses - background updates only
+    refetchInterval: false, // Disabled to prevent auto-refresh - use manual refetch if needed
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false, // Disabled to prevent auto-refresh on window focus
+    staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     retry: 1, // Only retry once to show errors faster
     retryDelay: 500, // Retry after 500ms instead of default longer delay
   });

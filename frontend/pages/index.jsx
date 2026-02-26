@@ -357,30 +357,59 @@ export default function Login() {
   };
 
   const handleOtpChange = (index, value) => {
-    // Check if pasted text (more than 1 character)
-    const sanitized = value.replace(/[^0-9]/g, '');
-    
-    if (sanitized.length > 1) {
-      // User pasted multiple characters - distribute them
+    const rawValue = value;
+    const sanitized = rawValue.replace(/[^0-9]/g, '');
+
+    if (!sanitized) {
       const newOtp = [...otp];
-      for (let i = 0; i < sanitized.length && (index + i) < 8; i++) {
-        newOtp[index + i] = sanitized[i];
-      }
+      newOtp[index] = '';
       setOtp(newOtp);
       setOtpError('');
-      
-      // Focus on the next empty input or last input
+      return;
+    }
+
+    const newOtp = [...otp];
+
+    // 🔥 If full code pasted into first input
+    if (sanitized.length >= 8 && index === 0) {
+      const digits = sanitized.slice(0, 8).split('');
+      setOtp(digits);
+      setOtpError('');
+
+      setTimeout(() => {
+        const lastInput = document.querySelector(`input[name="otp-7"]`);
+        if (lastInput) lastInput.focus();
+      }, 0);
+
+      return;
+    }
+
+    // 🔥 If multiple characters pasted (partial paste)
+    if (sanitized.length > 1) {
+      for (let i = 0; i < sanitized.length && index + i < 8; i++) {
+        newOtp[index + i] = sanitized[i];
+      }
+
+      setOtp(newOtp);
+      setOtpError('');
+
       const nextIndex = Math.min(index + sanitized.length, 7);
       setTimeout(() => {
         const nextInput = document.querySelector(`input[name="otp-${nextIndex}"]`);
         if (nextInput) nextInput.focus();
       }, 0);
-    } else {
-      // Single character input
-      const newOtp = [...otp];
-      newOtp[index] = sanitized.slice(0, 1);
-      setOtp(newOtp);
-      setOtpError('');
+
+      return;
+    }
+
+    // Normal single character
+    newOtp[index] = sanitized;
+    setOtp(newOtp);
+    setOtpError('');
+
+    if (index < 7) {
+      const nextInput = document.querySelector(`input[name="otp-${index + 1}"]`);
+      if (nextInput) nextInput.focus();
     }
   };
 
@@ -388,34 +417,20 @@ export default function Login() {
     e.preventDefault();
     const pastedText = e.clipboardData.getData('text');
     const sanitized = pastedText.replace(/[^0-9]/g, '').slice(0, 8);
-    
-    if (sanitized.length === 8) {
-      // Fill all 8 inputs with the pasted code
-      const newOtp = sanitized.split('').slice(0, 8);
-      setOtp(newOtp);
-      setOtpError('');
-      
-      // Focus on the last input after pasting
-      setTimeout(() => {
-        const lastInput = document.querySelector(`input[name="otp-7"]`);
-        if (lastInput) lastInput.focus();
-      }, 0);
-    } else if (sanitized.length > 0) {
-      // If pasted text is less than 8 characters, fill from current index
-      const newOtp = [...otp];
-      for (let i = 0; i < sanitized.length && (index + i) < 8; i++) {
-        newOtp[index + i] = sanitized[i];
-      }
-      setOtp(newOtp);
-      setOtpError('');
-      
-      // Focus on the next empty input or last input
-      const nextIndex = Math.min(index + sanitized.length, 7);
-      setTimeout(() => {
-        const nextInput = document.querySelector(`input[name="otp-${nextIndex}"]`);
-        if (nextInput) nextInput.focus();
-      }, 0);
+    if (sanitized.length === 0) return;
+
+    const newOtp = [...otp];
+    const startIdx = sanitized.length === 8 ? 0 : index;
+    for (let i = 0; i < sanitized.length && (startIdx + i) < 8; i++) {
+      newOtp[startIdx + i] = sanitized[i];
     }
+    setOtp(newOtp);
+    setOtpError('');
+    const lastIndex = Math.min(startIdx + sanitized.length - 1, 7);
+    setTimeout(() => {
+      const lastInput = document.querySelector(`input[name="otp-${lastIndex}"]`);
+      if (lastInput) lastInput.focus();
+    }, 0);
   };
 
   const handleOtpKeyDown = (e, index) => {
@@ -1273,7 +1288,9 @@ export default function Login() {
                   key={index}
                   name={`otp-${index}`}
                   type="text"
-                  maxLength="1"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete={index === 0 ? "one-time-code" : "off"}
                   value={char}
                   onChange={(e) => handleOtpChange(index, e.target.value)}
                   onKeyDown={(e) => handleOtpKeyDown(e, index)}

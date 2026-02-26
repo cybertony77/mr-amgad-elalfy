@@ -11,8 +11,8 @@ export const queryClient = new QueryClient({
       retry: 3,
       // Retry with exponential backoff
       retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-      // Refetch on window focus for immediate updates
-      refetchOnWindowFocus: true,
+      // Disabled to prevent auto-refresh on window focus - updates happen in background
+      refetchOnWindowFocus: false,
       // Refetch on reconnect
       refetchOnReconnect: true,
       // Background refetch when stale

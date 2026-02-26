@@ -73,7 +73,7 @@ export default function ManageAssistantsDevices() {
       search: searchTerm.trim() || undefined,
     },
     {
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false, // Disabled to prevent auto-refresh on window focus
       staleTime: 2 * 60 * 1000,
     }
   );

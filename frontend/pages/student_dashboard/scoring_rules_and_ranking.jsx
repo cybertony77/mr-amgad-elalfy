@@ -22,8 +22,9 @@ export default function ScoringRulesAndRanking() {
   const studentId = profile?.id ? profile.id.toString() : null;
   const { data: studentData, isLoading: studentLoading } = useStudent(studentId, { 
     enabled: !!studentId,
-    refetchInterval: 60000, // Auto-refetch every 1 minute (60,000 ms)
-    refetchIntervalInBackground: true, // Continue refetching even when tab is in background
+    refetchInterval: false, // Disabled to prevent auto-refresh - use manual refetch if needed
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false, // Disabled to prevent auto-refresh on window focus
   });
 
   // Fetch student rankings
