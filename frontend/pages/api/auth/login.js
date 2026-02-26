@@ -40,6 +40,22 @@ const SUBSCRIPTION_ENABLED = envConfig.SYSTEM_SUBSCRIPTION === 'true' || process
 const DEVICE_LIMITATIONS_ENABLED =
   envConfig.SYSTEM_DEVICE_LIMITATIONS === 'true' || process.env.SYSTEM_DEVICE_LIMITATIONS === 'true';
 
+// Format date as DD/MM/YYYY at HH:MM AM/PM
+function formatDateTime(date) {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const hoursStr = String(hours).padStart(2, '0');
+
+  return `${day}/${month}/${year} at ${hoursStr}:${minutes} ${ampm}`;
+}
+
 console.log('🔗 Using Mongo URI:', MONGO_URI);
 
 export default async function handler(req, res) {
@@ -56,12 +72,47 @@ export default async function handler(req, res) {
   if (typeof password !== 'string') {
     return res.status(400).json({ error: 'Invalid password' });
   }
-  const safeId = typeof assistant_id === 'number' ? assistant_id : String(assistant_id).replace(/[$]/g, '');
+  // Convert ID to appropriate type - try both number and string formats
+  let safeId;
+  let safeIdAsNumber = null;
+  let safeIdAsString = null;
+  
+  if (typeof assistant_id === 'number') {
+    safeId = assistant_id;
+    safeIdAsNumber = assistant_id;
+    safeIdAsString = String(assistant_id);
+  } else {
+    const idStr = String(assistant_id).replace(/[$]/g, '').trim();
+    // If it's a numeric string, try both number and string formats
+    if (/^\d+$/.test(idStr)) {
+      safeIdAsNumber = parseInt(idStr, 10);
+      safeIdAsString = idStr;
+      safeId = safeIdAsNumber; // Default to number for numeric IDs
+    } else {
+      safeId = idStr;
+      safeIdAsString = idStr;
+    }
+  }
+  
   let client;
   try {
     client = await MongoClient.connect(MONGO_URI);
     const db = client.db(DB_NAME);
-    const assistant = await db.collection('users').findOne({ id: safeId });
+    
+    // Try to find user by ID - try number first, then string if numeric
+    let assistant = null;
+    if (safeIdAsNumber !== null) {
+      // Try as number first
+      assistant = await db.collection('users').findOne({ id: safeIdAsNumber });
+      if (!assistant) {
+        // If not found as number, try as string
+        assistant = await db.collection('users').findOne({ id: safeIdAsString });
+      }
+    } else {
+      // Non-numeric ID, try as string
+      assistant = await db.collection('users').findOne({ id: safeId });
+    }
+    
     if (!assistant) {
       return res.status(401).json({ error: 'user_not_found' });
     }
