@@ -37,16 +37,20 @@ const DB_NAME = envConfig.DB_NAME || process.env.DB_NAME || 'mr-george-magdy';
 
 // Helper function to check if device limitations are enabled
 function isDeviceLimitationsEnabled() {
+  // Get value from env.config first, then fallback to process.env
   const envValue = envConfig.SYSTEM_DEVICE_LIMITATIONS || process.env.SYSTEM_DEVICE_LIMITATIONS || '';
   const normalizedValue = String(envValue).toLowerCase().trim();
+  // Accept 'true' or '1' as enabled values
   const enabled = normalizedValue === 'true' || normalizedValue === '1';
   
-  // Debug logging
+  // Debug logging to help diagnose issues
   console.log('🔍 Device Limitations Check:', {
     rawEnvConfig: envConfig.SYSTEM_DEVICE_LIMITATIONS,
     rawProcessEnv: process.env.SYSTEM_DEVICE_LIMITATIONS,
+    envValue,
     normalizedValue,
     enabled,
+    type: typeof envValue,
   });
   
   return enabled;
