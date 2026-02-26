@@ -40,20 +40,28 @@ const SUBSCRIPTION_ENABLED = envConfig.SYSTEM_SUBSCRIPTION === 'true' || process
 const DEVICE_LIMITATIONS_ENABLED =
   envConfig.SYSTEM_DEVICE_LIMITATIONS === 'true' || process.env.SYSTEM_DEVICE_LIMITATIONS === 'true';
 
-// Format date as DD/MM/YYYY at HH:MM AM/PM
+// Format date as DD/MM/YYYY at HH:MM AM/PM in Egypt/Cairo timezone
 function formatDateTime(date) {
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
+  // Convert to Egypt/Cairo timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Africa/Cairo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
 
-  let hours = date.getHours();
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  const hoursStr = String(hours).padStart(2, '0');
+  const parts = formatter.formatToParts(date);
+  const day = parts.find(p => p.type === 'day').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const year = parts.find(p => p.type === 'year').value;
+  const hour = parts.find(p => p.type === 'hour').value;
+  const minute = parts.find(p => p.type === 'minute').value;
+  const period = parts.find(p => p.type === 'dayPeriod').value.toUpperCase();
 
-  return `${day}/${month}/${year} at ${hoursStr}:${minutes} ${ampm}`;
+  return `${day}/${month}/${year} at ${hour}:${minute} ${period}`;
 }
 
 console.log('🔗 Using Mongo URI:', MONGO_URI);
