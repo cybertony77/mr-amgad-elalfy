@@ -34,17 +34,22 @@ const envConfig = loadEnvConfig();
 const MONGO_URI =
   envConfig.MONGO_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/topphysics';
 const DB_NAME = envConfig.DB_NAME || process.env.DB_NAME || 'mr-george-magdy';
-const DEVICE_LIMITATIONS_ENABLED =
-  String(envConfig.SYSTEM_DEVICE_LIMITATIONS || '').toLowerCase().trim() === 'true' ||
-  String(process.env.SYSTEM_DEVICE_LIMITATIONS || '').toLowerCase().trim() === 'true';
 
-// Debug logging (can be removed after fixing)
-if (process.env.NODE_ENV !== 'production') {
-  console.log('🔍 Device Limitations Debug:', {
-    envConfigValue: envConfig.SYSTEM_DEVICE_LIMITATIONS,
-    processEnvValue: process.env.SYSTEM_DEVICE_LIMITATIONS,
-    enabled: DEVICE_LIMITATIONS_ENABLED,
+// Helper function to check if device limitations are enabled
+function isDeviceLimitationsEnabled() {
+  const envValue = envConfig.SYSTEM_DEVICE_LIMITATIONS || process.env.SYSTEM_DEVICE_LIMITATIONS || '';
+  const normalizedValue = String(envValue).toLowerCase().trim();
+  const enabled = normalizedValue === 'true' || normalizedValue === '1';
+  
+  // Debug logging
+  console.log('🔍 Device Limitations Check:', {
+    rawEnvConfig: envConfig.SYSTEM_DEVICE_LIMITATIONS,
+    rawProcessEnv: process.env.SYSTEM_DEVICE_LIMITATIONS,
+    normalizedValue,
+    enabled,
   });
+  
+  return enabled;
 }
 
 // Format date as DD/MM/YYYY at HH:MM AM/PM
@@ -66,6 +71,8 @@ function formatDateTime(date) {
 export default async function handler(req, res) {
   let client;
 
+  // Check device limitations on each request
+  const DEVICE_LIMITATIONS_ENABLED = isDeviceLimitationsEnabled();
   if (!DEVICE_LIMITATIONS_ENABLED) {
     return res.status(400).json({ error: 'device_limitations_disabled' });
   }
