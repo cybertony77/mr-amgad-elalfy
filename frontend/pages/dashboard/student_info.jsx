@@ -551,7 +551,7 @@ export default function StudentInfo() {
     <div style={{ 
       padding: "20px 5px 20px 5px"
     }}>
-      <div ref={containerRef} style={{ maxWidth: 600, margin: "40px auto", padding: 24 }}>
+      <div ref={containerRef} style={{ maxWidth: 600, margin: "auto", padding: 24 }}>
         <style jsx>{`
           .header {
             display: flex;

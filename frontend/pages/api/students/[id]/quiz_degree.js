@@ -64,15 +64,49 @@ export default async function handler(req, res) {
     
     // Determine which week to update
     const weekNumber = week || 1;
-    const weekIndex = weekNumber - 1; // Convert to array index
     
-    // Update the specific week in the weeks array
-    const result = await db.collection('students').updateOne(
-      { id: student_id },
-      { $set: { [`weeks.${weekIndex}.quizDegree`]: quizDegree } }
-    );
+    // Ensure weeks array exists
+    if (!student.weeks || !Array.isArray(student.weeks)) {
+      await db.collection('students').updateOne(
+        { id: student_id },
+        { $set: { weeks: [] } }
+      );
+      student.weeks = [];
+    }
     
-    if (result.matchedCount === 0) return res.status(404).json({ error: 'Student not found' });
+    // Find the week in the weeks array
+    const weeks = student.weeks || [];
+    const weekIndex = weeks.findIndex(w => w && w.week === weekNumber);
+    
+    if (weekIndex === -1) {
+      // Week doesn't exist, create it with default schema
+      const newWeek = {
+        week: weekNumber,
+        attended: false,
+        lastAttendance: null,
+        lastAttendanceCenter: null,
+        hwDone: false,
+        hwDegree: null,
+        quizDegree: quizDegree,
+        comment: null,
+        message_state: false
+      };
+      
+      const result = await db.collection('students').updateOne(
+        { id: student_id },
+        { $push: { weeks: newWeek } }
+      );
+      
+      if (result.matchedCount === 0) return res.status(404).json({ error: 'Student not found' });
+    } else {
+      // Update existing week
+      const result = await db.collection('students').updateOne(
+        { id: student_id },
+        { $set: { [`weeks.${weekIndex}.quizDegree`]: quizDegree } }
+      );
+      
+      if (result.matchedCount === 0) return res.status(404).json({ error: 'Student not found' });
+    }
     
     res.json({ success: true });
   } catch (error) {

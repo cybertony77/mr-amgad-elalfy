@@ -478,8 +478,8 @@ export default function MyHomeworks() {
   // Check deadlines and update student weeks if needed
   useEffect(() => {
     if (!profile?.id || homeworks.length === 0) return;
-    // Wait for studentWeeks to be loaded at least once before checking deadlines
-    if (!weeksLoaded) return;
+    // Allow the check to proceed even if weeksLoaded is false - we'll treat studentWeeks as empty array
+    // The API will create the week if it doesn't exist
 
     const checkDeadlines = async () => {
       for (const homework of homeworks) {
@@ -495,10 +495,34 @@ export default function MyHomeworks() {
             const weekNum = typeof homework.week === 'number' ? homework.week : parseInt(homework.week, 10);
             if (!isNaN(weekNum)) {
               // Check current week data to see if we need to update
-              const weekData = studentWeeks.find(w => {
+              let weekData = studentWeeks.find(w => {
                 const wWeek = typeof w.week === 'number' ? w.week : parseInt(w.week, 10);
                 return !isNaN(wWeek) && wWeek === weekNum;
               });
+              
+              // Ensure week exists - if not, create it with default schema
+              if (!weekData) {
+                try {
+                  // Create week with default schema by calling the hw API
+                  // The API will create the week if it doesn't exist
+                  await apiClient.post(`/api/students/${profile.id}/hw`, {
+                    week: weekNum,
+                    hwDone: false
+                  });
+                  // Refresh student data to get the newly created week
+                  const studentResponse = await apiClient.get(`/api/students/${profile.id}`);
+                  if (studentResponse.data && Array.isArray(studentResponse.data.weeks)) {
+                    setStudentWeeks(studentResponse.data.weeks);
+                    weekData = studentResponse.data.weeks.find(w => {
+                      const wWeek = typeof w.week === 'number' ? w.week : parseInt(w.week, 10);
+                      return !isNaN(wWeek) && wWeek === weekNum;
+                    });
+                  }
+                } catch (createErr) {
+                  console.error(`Error creating week ${weekNum}:`, createErr);
+                  continue; // Skip this homework if we can't create the week
+                }
+              }
               
               // Protected values that should never be overwritten
               const protectedHwDoneValues = [true, "Not Completed", "No Homework"];
