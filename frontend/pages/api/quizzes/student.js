@@ -73,20 +73,27 @@ export default async function handler(req, res) {
         // This handles case differences: "2nd secondary" matches "2nd Secondary"
         const allQuizzes = await db.collection('quizzes').find({}).toArray();
         
-        // Filter quizzes by normalized grade
+        // Filter quizzes by normalized grade and exclude deactivated quizzes
         console.log('🔍 Filtering quizzes. Student normalized grade:', normalizedStudentGrade);
         console.log('🔍 Total quizzes before filter:', allQuizzes.length);
         const filteredQuizzes = allQuizzes.filter(quiz => {
+          // Exclude deactivated quizzes using state or legacy account_state
+          const effectiveState = quiz.state || quiz.account_state || 'Activated';
+          if (effectiveState === 'Deactivated') {
+            console.log('🚫 Skipping deactivated quiz:', quiz._id);
+            return false;
+          }
+
           if (!quiz.grade) {
             console.log('⚠️ Quiz has no grade:', quiz._id);
             return false;
           }
           const normalizedQuizGrade = quiz.grade.toLowerCase().replace(/\./g, '').trim();
           const matches = normalizedQuizGrade === normalizedStudentGrade;
-          console.log(`🔍 Quiz grade: "${quiz.grade}" → normalized: "${normalizedQuizGrade}" | Matches: ${matches}`);
+          console.log(`🔍 Quiz grade: "${quiz.grade}" → normalized: "${normalizedQuizGrade}" | Matches: ${matches} | state: ${effectiveState}`);
           return matches;
         });
-        console.log('✅ Filtered quizzes count:', filteredQuizzes.length);
+        console.log('✅ Filtered quizzes count (grade + state):', filteredQuizzes.length);
         
         // Sort by week number (ascending), with null weeks at the end
         const sortedQuizzes = filteredQuizzes.sort((a, b) => {
@@ -106,25 +113,29 @@ export default async function handler(req, res) {
         });
         
         // Remove correct_answer from questions for students
-        const sanitizedQuizzes = sortedQuizzes.map(quiz => ({
-          _id: quiz._id,
-          grade: quiz.grade || null,
-          lesson_name: quiz.lesson_name,
-          week: quiz.week || null,
-          quiz_type: 'questions', // Always questions type
-          deadline_type: quiz.deadline_type || 'no_deadline',
-          deadline_date: quiz.deadline_date || null,
-          timer: quiz.timer,
-          shuffle_questions_and_answers: quiz.shuffle_questions_and_answers || false,
-          show_details_after_submitting: quiz.show_details_after_submitting || false,
-          questions: (quiz.questions || []).map(q => ({
-            question_text: q.question_text || '',
-            question_picture: q.question_picture || null,
-            answers: q.answers || [],
-            answer_texts: q.answer_texts || []
-            // Note: correct_answer is intentionally excluded for students
-          }))
-        }));
+        const sanitizedQuizzes = sortedQuizzes.map(quiz => {
+          const effectiveState = quiz.state || quiz.account_state || 'Activated';
+          return {
+            _id: quiz._id,
+            grade: quiz.grade || null,
+            lesson_name: quiz.lesson_name,
+            week: quiz.week || null,
+            quiz_type: 'questions', // Always questions type
+            deadline_type: quiz.deadline_type || 'no_deadline',
+            deadline_date: quiz.deadline_date || null,
+            timer: quiz.timer,
+            shuffle_questions_and_answers: quiz.shuffle_questions_and_answers || false,
+            show_details_after_submitting: quiz.show_details_after_submitting || false,
+            state: effectiveState,
+            questions: (quiz.questions || []).map(q => ({
+              question_text: q.question_text || '',
+              question_picture: q.question_picture || null,
+              answers: q.answers || [],
+              answer_texts: q.answer_texts || []
+              // Note: correct_answer is intentionally excluded for students
+            }))
+          };
+        });
         
         return res.status(200).json({ success: true, quizzes: sanitizedQuizzes });
       } else {

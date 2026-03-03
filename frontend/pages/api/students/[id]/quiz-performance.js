@@ -149,8 +149,13 @@ export default async function handler(req, res) {
     const normalizedStudentGrade = studentGrade.toLowerCase().replace(/\./g, '').trim();
     const allQuizzes = await db.collection('quizzes').find({}).toArray();
     
-    // Filter quizzes by normalized grade
+    // Filter quizzes by normalized grade and exclude deactivated quizzes
     const filteredQuizzes = allQuizzes.filter(qz => {
+      // Exclude deactivated quizzes using state or legacy account_state
+      const effectiveState = qz.state || qz.account_state || 'Activated';
+      if (effectiveState === 'Deactivated') {
+        return false;
+      }
       if (!qz.grade || !qz.week) return false; // Only include quizzes with grade and week
       const normalizedQuizGrade = qz.grade.toLowerCase().replace(/\./g, '').trim();
       return normalizedQuizGrade === normalizedStudentGrade;

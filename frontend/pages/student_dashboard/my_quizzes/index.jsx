@@ -298,21 +298,20 @@ export default function MyQuizzes() {
 
   const chartData = performanceData?.chartData || [];
 
-  // Only show chart lessons that have at least one Activated quiz
-  const activeLessons = new Set(
+  // Only show chart weeks that have at least one Activated quiz
+  const activeQuizWeeks = new Set(
     quizzes
-      .filter(quiz => (quiz.state || quiz.account_state || 'Activated') === 'Activated' && quiz.lesson)
-      .map(quiz => quiz.lesson)
+      .filter(quiz => (quiz.state || quiz.account_state || 'Activated') === 'Activated' && quiz.week !== undefined && quiz.week !== null)
+      .map(quiz => quiz.week)
   );
 
   const filteredChartData = Array.isArray(chartData)
     ? chartData.filter(item => {
-        const label = (item.week || '').toString().toLowerCase();
-        if (!label) return false;
-        if (activeLessons.size === 0) return true;
-        return Array.from(activeLessons).some(lesson =>
-          label.includes(String(lesson).toLowerCase())
-        );
+        const weekNum = typeof item.weekNumber === 'number'
+          ? item.weekNumber
+          : extractWeekNumber(item.week);
+        if (weekNum === null || weekNum === undefined) return false;
+        return activeQuizWeeks.has(weekNum);
       })
     : [];
 
@@ -768,7 +767,7 @@ export default function MyQuizzes() {
               Loading chart data...
             </div>
           ) : (
-            <QuizPerformanceChart chartData={chartData} height={400} />
+            <QuizPerformanceChart chartData={filteredChartData} height={400} />
           )}
         </div>
 

@@ -550,15 +550,6 @@ export default function AddQuiz() {
           boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
         }}>
           <form onSubmit={handleSubmit}>
-            {/* Quiz State */}
-            <div style={{ marginBottom: '20px' }}>
-              <AccountStateSelect
-                value={accountState}
-                onChange={setAccountState}
-                label="Quiz State"
-                placeholder="Select State"
-              />
-            </div>
             {/* Quiz Grade */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', textAlign: 'left' }}>
@@ -608,6 +599,16 @@ export default function AddQuiz() {
                   {errors.week}
                 </div>
               )}
+            </div>
+
+            {/* Quiz State */}
+            <div style={{ marginBottom: '20px' }}>
+              <AccountStateSelect
+                value={accountState}
+                onChange={setAccountState}
+                label="Quiz State"
+                placeholder="Select State"
+              />
             </div>
 
             {/* Lesson Name */}

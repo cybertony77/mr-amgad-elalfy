@@ -552,15 +552,6 @@ export default function AddHomework() {
           boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
         }}>
           <form onSubmit={handleSubmit}>
-            {/* Homework State */}
-            <div style={{ marginBottom: '20px' }}>
-              <AccountStateSelect
-                value={accountState}
-                onChange={setAccountState}
-                label="Homework State"
-                placeholder="Select State"
-              />
-            </div>
             {/* Homework Grade */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', textAlign: 'left' }}>
@@ -610,6 +601,16 @@ export default function AddHomework() {
                   {errors.week}
                 </div>
               )}
+            </div>
+
+            {/* Homework State */}
+            <div style={{ marginBottom: '20px' }}>
+              <AccountStateSelect
+                value={accountState}
+                onChange={setAccountState}
+                label="Homework State"
+                placeholder="Select State"
+              />
             </div>
 
             {/* Lesson Name */}
