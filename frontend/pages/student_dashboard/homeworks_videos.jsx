@@ -281,10 +281,12 @@ export default function HomeworksVideos() {
     return `week ${String(weekNumber).padStart(2, '0')}`;
   };
 
-  // Get available weeks from sessions (only weeks that exist in the data)
+  // Get available weeks from sessions (only weeks that exist in the data and are Activated)
   const getAvailableWeeks = () => {
     const weekSet = new Set();
     sessions.forEach(session => {
+      const effectiveState = session.state || session.account_state || 'Activated';
+      if (effectiveState === 'Deactivated') return;
       if (session.week !== undefined && session.week !== null) {
         weekSet.add(weekNumberToString(session.week));
       }
@@ -300,6 +302,11 @@ export default function HomeworksVideos() {
 
   // Filter sessions based on search and filters
   const filteredSessions = sessions.filter(session => {
+    // Hide deactivated homework videos
+    const effectiveState = session.state || session.account_state || 'Activated';
+    if (effectiveState === 'Deactivated') {
+      return false;
+    }
     // Search filter (by lesson name - case-insensitive)
     if (searchTerm.trim()) {
       const lessonName = session.name || '';

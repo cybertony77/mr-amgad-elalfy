@@ -37,6 +37,35 @@ export default function PreviewStudentHomeworks() {
     enabled: !!searchId && !!student,
   });
 
+  // Fetch all homeworks to check state for filtering
+  const { data: allHomeworksData } = useQuery({
+    queryKey: ['all-homeworks'],
+    queryFn: async () => {
+      const response = await apiClient.get('/api/homeworks');
+      return response.data;
+    },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+  });
+
+  const allHomeworks = allHomeworksData?.homeworks || [];
+
+  // Get active weeks from Activated homeworks
+  const activeWeeks = useMemo(() => {
+    const weekSet = new Set();
+    allHomeworks.forEach(homework => {
+      const itemState = homework.state || homework.account_state || 'Activated';
+      if (itemState === 'Activated') {
+        if (homework.week !== undefined && homework.week !== null) {
+          weekSet.add(homework.week.toString());
+        }
+      }
+    });
+    return weekSet;
+  }, [allHomeworks]);
+
   // Fetch homework performance chart data using API endpoint
   const { data: performanceData, isLoading: isChartLoading } = useQuery({
     queryKey: ['homework-performance', searchId],
@@ -58,7 +87,21 @@ export default function PreviewStudentHomeworks() {
     retry: 1,
   });
 
-  const chartData = performanceData?.chartData || [];
+  const rawChartData = performanceData?.chartData || [];
+
+  // Filter chart data to only include Activated weeks
+  const chartData = useMemo(() => {
+    if (!Array.isArray(rawChartData) || rawChartData.length === 0) return [];
+    if (activeWeeks.size === 0) return rawChartData; // If no active weeks, show all
+    
+    return rawChartData.filter(item => {
+      const label = (item.week || item.weekNumber || '').toString().toLowerCase();
+      if (!label) return false;
+      return Array.from(activeWeeks).some(week =>
+        label.includes(String(week).toLowerCase())
+      );
+    });
+  }, [rawChartData, activeWeeks]);
 
   // Reset homework mutation
   const resetHomeworkMutation = useMutation({

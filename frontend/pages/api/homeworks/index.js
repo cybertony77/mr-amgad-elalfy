@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       // Create new homework
-      const { lesson_name, timer, questions, week, grade, homework_type, deadline_type, deadline_date, book_name, from_page, to_page, shuffle_questions_and_answers, show_details_after_submitting } = req.body;
+      const { lesson_name, timer, questions, week, grade, homework_type, deadline_type, deadline_date, book_name, from_page, to_page, shuffle_questions_and_answers, show_details_after_submitting, state } = req.body;
 
       if (!lesson_name || lesson_name.trim() === '') {
         return res.status(400).json({ error: '❌ Lesson name is required' });
@@ -145,6 +145,9 @@ export default async function handler(req, res) {
         }
       }
 
+      // Normalize state (Activated/Deactivated), default to Activated
+      const normalizedState = state === 'Deactivated' ? 'Deactivated' : 'Activated';
+
       const homework = {
         week: weekNumber,
         grade: grade.trim(),
@@ -154,6 +157,7 @@ export default async function handler(req, res) {
         deadline_date: deadline_type === 'with_deadline' ? deadline_date : null,
         timer: homework_type === 'questions' && timer !== null && timer !== undefined ? parseInt(timer) : null,
         shuffle_questions_and_answers: homework_type === 'questions' ? (shuffle_questions_and_answers === true || shuffle_questions_and_answers === 'true') : false,
+        state: normalizedState,
         show_details_after_submitting: homework_type === 'questions' ? (show_details_after_submitting === true || show_details_after_submitting === 'true') : false,
       };
 
@@ -197,7 +201,7 @@ export default async function handler(req, res) {
     if (req.method === 'PUT') {
       // Update homework
       const { id } = req.query;
-      const { lesson_name, timer, questions, week, grade, homework_type, deadline_type, deadline_date, book_name, from_page, to_page, shuffle_questions_and_answers, show_details_after_submitting } = req.body;
+      const { lesson_name, timer, questions, week, grade, homework_type, deadline_type, deadline_date, book_name, from_page, to_page, shuffle_questions_and_answers, show_details_after_submitting, state } = req.body;
 
       if (!id) {
         return res.status(400).json({ error: '❌ Homework ID is required' });
@@ -292,6 +296,9 @@ export default async function handler(req, res) {
         }
       }
 
+      // Normalize state (Activated/Deactivated), default to Activated
+      const normalizedState = state === 'Deactivated' ? 'Deactivated' : 'Activated';
+
       const updateData = {
         week: weekNumber,
         grade: grade.trim(),
@@ -301,6 +308,7 @@ export default async function handler(req, res) {
         deadline_date: deadline_type === 'with_deadline' ? deadline_date : null,
         timer: homework_type === 'questions' && timer !== null && timer !== undefined ? parseInt(timer) : null,
         shuffle_questions_and_answers: homework_type === 'questions' ? (shuffle_questions_and_answers === true || shuffle_questions_and_answers === 'true') : false,
+        state: normalizedState,
         show_details_after_submitting: homework_type === 'questions' ? (show_details_after_submitting === true || show_details_after_submitting === 'true') : false,
       };
 

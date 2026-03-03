@@ -210,10 +210,12 @@ export default function MyQuizzes() {
     return `week ${String(weekNumber).padStart(2, '0')}`;
   };
 
-  // Get available weeks from quizzes (only weeks that exist in the data)
+  // Get available weeks from quizzes (only weeks that exist in the data and are Activated)
   const getAvailableWeeks = () => {
     const weekSet = new Set();
     quizzes.forEach(quiz => {
+      const effectiveState = quiz.state || quiz.account_state || 'Activated';
+      if (effectiveState === 'Deactivated') return;
       if (quiz.week !== undefined && quiz.week !== null) {
         weekSet.add(weekNumberToString(quiz.week));
       }
@@ -229,6 +231,11 @@ export default function MyQuizzes() {
 
   // Filter quizzes based on search and filters
   const filteredQuizzes = quizzes.filter(quiz => {
+    // Hide deactivated quizzes
+    const effectiveState = quiz.state || quiz.account_state || 'Activated';
+    if (effectiveState === 'Deactivated') {
+      return false;
+    }
     // Search filter (by lesson name - case-insensitive)
     if (searchTerm.trim()) {
       const lessonName = quiz.lesson_name || '';
@@ -290,6 +297,24 @@ export default function MyQuizzes() {
   });
 
   const chartData = performanceData?.chartData || [];
+
+  // Only show chart lessons that have at least one Activated quiz
+  const activeLessons = new Set(
+    quizzes
+      .filter(quiz => (quiz.state || quiz.account_state || 'Activated') === 'Activated' && quiz.lesson)
+      .map(quiz => quiz.lesson)
+  );
+
+  const filteredChartData = Array.isArray(chartData)
+    ? chartData.filter(item => {
+        const label = (item.week || '').toString().toLowerCase();
+        if (!label) return false;
+        if (activeLessons.size === 0) return true;
+        return Array.from(activeLessons).some(lesson =>
+          label.includes(String(lesson).toLowerCase())
+        );
+      })
+    : [];
 
   // Refetch chart data when returning to this page
   useEffect(() => {

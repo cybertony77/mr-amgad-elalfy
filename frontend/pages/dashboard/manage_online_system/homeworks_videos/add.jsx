@@ -5,6 +5,7 @@ import AttendanceWeekSelect from '../../../../components/AttendanceWeekSelect';
 import GradeSelect from '../../../../components/GradeSelect';
 import OnlineSessionPaymentStateSelect from '../../../../components/OnlineSessionPaymentStateSelect';
 import VideoInput from '../../../../components/VideoInput';
+import AccountStateSelect from '../../../../components/AccountStateSelect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../../lib/axios';
 import Image from 'next/image';
@@ -45,6 +46,7 @@ export default function AddHomeworkVideo() {
   const [selectedWeek, setSelectedWeek] = useState('');
   const [weekDropdownOpen, setWeekDropdownOpen] = useState(false);
   const [paymentState, setPaymentState] = useState('paid');
+  const [accountState, setAccountState] = useState('Activated');
   const [errors, setErrors] = useState({});
   const errorTimeoutRef = useRef(null);
 
@@ -318,7 +320,8 @@ export default function AddHomeworkVideo() {
       week: weekNumber,
       videos: finalVideoData,
       description: formData.description.trim() || null,
-      payment_state: paymentState
+      payment_state: paymentState,
+      state: accountState,
     });
   };
 
@@ -454,6 +457,15 @@ export default function AddHomeworkVideo() {
                   {errors.paymentState}
                 </div>
               )}
+            </div>
+
+            {/* Video State */}
+            <div style={{ marginBottom: '20px' }}>
+              <AccountStateSelect
+                value={accountState}
+                onChange={setAccountState}
+                label="Video State"
+              />
             </div>
 
             {/* Name Input */}

@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Title from '../../../../components/Title';
 import AttendanceWeekSelect from '../../../../components/AttendanceWeekSelect';
 import GradeSelect from '../../../../components/GradeSelect';
+import AccountStateSelect from '../../../../components/AccountStateSelect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../../lib/axios';
 import Image from 'next/image';
@@ -29,8 +30,8 @@ export default function AddQuiz() {
     questions: [{
       question_text: '',
       question_picture: null,
-      answers: ['A', 'B'],
-      answer_texts: ['', ''], // Text for each answer option
+      answers: ['A', 'B', 'C', 'D'],
+      answer_texts: ['', '', '', ''], // Text for each answer option
       correct_answer: '',
       question_explanation: '' // Explanation for the question (optional)
     }] || []
@@ -44,6 +45,7 @@ export default function AddQuiz() {
   const [imagePreviews, setImagePreviews] = useState({});
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const errorTimeoutRef = useRef(null);
+  const [accountState, setAccountState] = useState('Activated');
 
   // Fetch all quizzes for duplicate validation
   const { data: quizzesData } = useQuery({
@@ -510,6 +512,10 @@ export default function AddQuiz() {
       show_details_after_submitting: formData.show_details_after_submitting,
     };
 
+    if (accountState) {
+      submitData.state = accountState;
+    }
+
     if (formData.questions && Array.isArray(formData.questions)) {
       submitData.questions = formData.questions.map(q => ({
         question_text: q.question_text || '',
@@ -544,6 +550,15 @@ export default function AddQuiz() {
           boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
         }}>
           <form onSubmit={handleSubmit}>
+            {/* Quiz State */}
+            <div style={{ marginBottom: '20px' }}>
+              <AccountStateSelect
+                value={accountState}
+                onChange={setAccountState}
+                label="Quiz State"
+                placeholder="Select State"
+              />
+            </div>
             {/* Quiz Grade */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', textAlign: 'left' }}>

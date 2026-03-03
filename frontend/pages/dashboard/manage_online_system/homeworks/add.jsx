@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Title from '../../../../components/Title';
 import AttendanceWeekSelect from '../../../../components/AttendanceWeekSelect';
 import GradeSelect from '../../../../components/GradeSelect';
+import AccountStateSelect from '../../../../components/AccountStateSelect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../../lib/axios';
 import Image from 'next/image';
@@ -18,6 +19,7 @@ function extractWeekNumber(weekString) {
 export default function AddHomework() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [accountState, setAccountState] = useState('Activated');
   const [formData, setFormData] = useState({
     lesson_name: '',
     deadline_type: 'no_deadline', // 'no_deadline' or 'with_deadline'
@@ -345,8 +347,8 @@ export default function AddHomework() {
       questions: [...prev.questions, {
         question_text: '',
         question_picture: null,
-        answers: ['A', 'B'],
-        answer_texts: ['', ''],
+        answers: ['A', 'B', 'C', 'D'],
+        answer_texts: ['', '', '', ''],
         correct_answer: '',
         question_explanation: ''
       }]
@@ -508,6 +510,10 @@ export default function AddHomework() {
       show_details_after_submitting: formData.homework_type === 'questions' ? formData.show_details_after_submitting : false,
     };
 
+    if (accountState) {
+      submitData.state = accountState;
+    }
+
     if (formData.homework_type === 'pages_from_book') {
       submitData.book_name = formData.book_name.trim();
       submitData.from_page = parseInt(formData.from_page);
@@ -546,6 +552,15 @@ export default function AddHomework() {
           boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
         }}>
           <form onSubmit={handleSubmit}>
+            {/* Homework State */}
+            <div style={{ marginBottom: '20px' }}>
+              <AccountStateSelect
+                value={accountState}
+                onChange={setAccountState}
+                label="Homework State"
+                placeholder="Select State"
+              />
+            </div>
             {/* Homework Grade */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', textAlign: 'left' }}>
@@ -659,14 +674,14 @@ export default function AddHomework() {
                     setFormData({ 
                       ...formData, 
                       homework_type: 'pages_from_book',
-                      questions: [{
-                        question_text: '',
-                        question_picture: null,
-                        answers: ['A', 'B'],
-                        answer_texts: ['', ''],
-                        correct_answer: '',
-                        question_explanation: ''
-                      }],
+    questions: [{
+      question_text: '',
+      question_picture: null,
+      answers: ['A', 'B', 'C', 'D'],
+      answer_texts: ['', '', '', ''],
+      correct_answer: '',
+      question_explanation: ''
+    }],
                       timer_type: 'no_timer',
                       timer: null
                     });

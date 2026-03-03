@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       // Create new quiz (always questions type)
-      const { lesson_name, timer, questions, week, grade, deadline_type, deadline_date, shuffle_questions_and_answers, show_details_after_submitting } = req.body;
+      const { lesson_name, timer, questions, week, grade, deadline_type, deadline_date, shuffle_questions_and_answers, show_details_after_submitting, state } = req.body;
 
       if (!grade || grade.trim() === '') {
         return res.status(400).json({ error: '❌ Grade is required' });
@@ -132,6 +132,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '❌ A quiz with this grade and week already exists' });
       }
 
+      // Normalize state (Activated/Deactivated), default to Activated
+      const normalizedState = state === 'Deactivated' ? 'Deactivated' : 'Activated';
+
       // Prepare quiz document (always questions type)
       const quizDoc = {
         lesson_name: lesson_name.trim(),
@@ -143,6 +146,7 @@ export default async function handler(req, res) {
         timer: timer || null,
         shuffle_questions_and_answers: shuffle_questions_and_answers === true || shuffle_questions_and_answers === 'true',
         show_details_after_submitting: show_details_after_submitting === true || show_details_after_submitting === 'true',
+        state: normalizedState,
         date: new Date(),
         questions: questions.map(q => ({
           question_text: q.question_text || '',
@@ -168,7 +172,7 @@ export default async function handler(req, res) {
     if (req.method === 'PUT') {
       // Update quiz (always questions type)
       const { id } = req.query;
-      const { lesson_name, timer, questions, week, grade, deadline_type, deadline_date, shuffle_questions_and_answers, show_details_after_submitting } = req.body;
+      const { lesson_name, timer, questions, week, grade, deadline_type, deadline_date, shuffle_questions_and_answers, show_details_after_submitting, state } = req.body;
 
       if (!id) {
         return res.status(400).json({ error: '❌ Quiz ID is required' });
@@ -248,6 +252,9 @@ export default async function handler(req, res) {
         }
       }
 
+      // Normalize state (Activated/Deactivated), default to Activated
+      const normalizedState = state === 'Deactivated' ? 'Deactivated' : 'Activated';
+
       // Prepare update data (always questions type)
       const updateData = {
         week: weekNumber,
@@ -258,6 +265,7 @@ export default async function handler(req, res) {
         deadline_date: deadline_type === 'with_deadline' ? deadline_date : null,
         timer: timer === null || timer === undefined ? null : parseInt(timer),
         shuffle_questions_and_answers: shuffle_questions_and_answers === true || shuffle_questions_and_answers === 'true',
+        state: normalizedState,
         questions: questions.map(q => ({
           question_text: q.question_text || '',
           question_picture: q.question_picture,

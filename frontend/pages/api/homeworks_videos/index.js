@@ -93,7 +93,7 @@ export default async function handler(req, res) {
 
     } else if (req.method === 'POST') {
       // Create new homework video
-      const { name, video_urls, videos, description, week, grade, payment_state } = req.body;
+      const { name, video_urls, videos, description, week, grade, payment_state, state } = req.body;
 
       // Validate required fields
       if (!grade || !grade.trim()) {
@@ -108,6 +108,9 @@ export default async function handler(req, res) {
       if (!payment_state || (payment_state !== 'paid' && payment_state !== 'free' && payment_state !== 'free_if_attended')) {
         return res.status(400).json({ error: 'Video Payment State is required and must be "paid", "free", or "free_if_attended"' });
       }
+
+      // Normalize state (Activated/Deactivated), default to Activated
+      const normalizedState = state === 'Deactivated' ? 'Deactivated' : 'Activated';
 
       // Handle both old format (video_urls) and new format (videos array)
       // YouTube and R2 video types are supported
@@ -183,6 +186,7 @@ export default async function handler(req, res) {
         name: name.trim(),
         ...videoData,
         description: description && description.trim() ? description.trim() : null,
+        state: normalizedState,
         date: formatDate(new Date())
       };
 
@@ -197,7 +201,7 @@ export default async function handler(req, res) {
     } else if (req.method === 'PUT') {
       // Update homework video
       const { id } = req.query;
-      const { name, video_urls, videos, description, week, grade, payment_state } = req.body;
+      const { name, video_urls, videos, description, week, grade, payment_state, state } = req.body;
 
       if (!id) {
         return res.status(400).json({ error: 'Session ID is required' });
@@ -216,6 +220,9 @@ export default async function handler(req, res) {
       if (!payment_state || (payment_state !== 'paid' && payment_state !== 'free' && payment_state !== 'free_if_attended')) {
         return res.status(400).json({ error: 'Video Payment State is required and must be "paid", "free", or "free_if_attended"' });
       }
+
+      // Normalize state (Activated/Deactivated), default to Activated
+      const normalizedState = state === 'Deactivated' ? 'Deactivated' : 'Activated';
 
       // Handle both old format (video_urls) and new format (videos array)
       // YouTube and R2 video types are supported
@@ -297,6 +304,7 @@ export default async function handler(req, res) {
         name: name.trim(),
         ...videoData,
         description: description && description.trim() ? description.trim() : null,
+        state: normalizedState,
         date: formatDate(new Date())
       };
 

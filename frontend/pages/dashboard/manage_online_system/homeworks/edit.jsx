@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Title from '../../../../components/Title';
 import AttendanceWeekSelect from '../../../../components/AttendanceWeekSelect';
 import GradeSelect from '../../../../components/GradeSelect';
+import AccountStateSelect from '../../../../components/AccountStateSelect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../../lib/axios';
 import Image from 'next/image';
@@ -58,6 +59,7 @@ export default function EditHomework() {
   const [loadingImages, setLoadingImages] = useState({});
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const errorTimeoutRef = useRef(null);
+  const [accountState, setAccountState] = useState('Activated');
 
   // Auto-hide errors after 6 seconds
   useEffect(() => {
@@ -162,6 +164,7 @@ export default function EditHomework() {
               question_explanation: ''
             }]
       });
+      setAccountState(homeworkData.state || homeworkData.account_state || 'Activated');
       setDataLoaded(true);
       dataLoadedRef.current = true; // Mark as loaded in ref
 
@@ -682,6 +685,10 @@ export default function EditHomework() {
       show_details_after_submitting: formData.homework_type === 'questions' ? formData.show_details_after_submitting : false,
     };
 
+    if (accountState) {
+      submitData.state = accountState;
+    }
+
     if (formData.homework_type === 'pages_from_book') {
       submitData.book_name = formData.book_name.trim();
       submitData.from_page = parseInt(formData.from_page);
@@ -796,6 +803,15 @@ export default function EditHomework() {
           boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
         }}>
           <form onSubmit={handleSubmit}>
+            {/* Homework State */}
+            <div style={{ marginBottom: '20px' }}>
+              <AccountStateSelect
+                value={accountState}
+                onChange={setAccountState}
+                label="Homework State"
+                placeholder="Select State"
+              />
+            </div>
             {/* Homework Grade */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', textAlign: 'left' }}>

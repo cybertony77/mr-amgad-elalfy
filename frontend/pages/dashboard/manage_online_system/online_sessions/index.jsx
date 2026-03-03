@@ -6,6 +6,7 @@ import AttendanceWeekSelect from '../../../../components/AttendanceWeekSelect';
 import GradeSelect from '../../../../components/GradeSelect';
 import OnlineSessionPaymentStateSelect from '../../../../components/OnlineSessionPaymentStateSelect';
 import R2VideoPlayer from '../../../../components/R2VideoPlayer';
+import AccountStateSelect from '../../../../components/AccountStateSelect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../../lib/axios';
 import { useSystemConfig } from '../../../../lib/api/system';
@@ -92,6 +93,7 @@ export default function OnlineSessions() {
   const [filterGrade, setFilterGrade] = useState('');
   const [filterWeek, setFilterWeek] = useState('');
   const [filterPaymentState, setFilterPaymentState] = useState('');
+  const [filterState, setFilterState] = useState('');
   const [filterGradeDropdownOpen, setFilterGradeDropdownOpen] = useState(false);
   const [filterWeekDropdownOpen, setFilterWeekDropdownOpen] = useState(false);
   const [filterPaymentStateDropdownOpen, setFilterPaymentStateDropdownOpen] = useState(false);
@@ -141,6 +143,12 @@ export default function OnlineSessions() {
       if (session.payment_state !== filterPaymentState) {
         return false;
       }
+    }
+
+    // State filter
+    const itemState = session.state || session.account_state || 'Activated';
+    if (filterState && itemState !== filterState) {
+      return false;
     }
 
     return true;
@@ -386,6 +394,18 @@ export default function OnlineSessions() {
                 onClose={() => setFilterPaymentStateDropdownOpen(false)}
               />
             </div>
+            <div className="filter-group" style={{ flex: 1, minWidth: 180 }}>
+              <label className="filter-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#495057', fontSize: '0.95rem' }}>
+                Filter by Video State
+              </label>
+              <AccountStateSelect
+                label="Video State"
+                value={filterState || null}
+                onChange={(value) => setFilterState(value || '')}
+                placeholder="Select Video State"
+                style={{ marginBottom: 0, hideLabel: true }}
+              />
+            </div>
           </div>
         </div>
 
@@ -526,6 +546,9 @@ export default function OnlineSessions() {
               videoLength++;
               videoIndex++;
             }
+
+            const itemState = session.state || session.account_state || 'Activated';
+            const stateColor = itemState === 'Activated' ? '#28a745' : '#dc3545';
             
             return (
                 <div
@@ -564,8 +587,10 @@ export default function OnlineSessions() {
                   <div style={{ fontWeight: '600', fontSize: '1.1rem', color: '#333', marginBottom: '4px' }}>
                     {[session.grade, session.week !== undefined && session.week !== null ? `Week ${session.week}` : null, session.name].filter(Boolean).join(' • ')}
                   </div>
-                    <div style={{ fontSize: '0.9rem', color: '#6c757d', marginTop: '4px' }}>
-                      {[session.payment_state || 'paid', `${videoLength} video${videoLength !== 1 ? 's' : ''}`, session.date].filter(Boolean).join(' • ')}
+                  <div style={{ fontSize: '0.9rem', color: '#6c757d', marginTop: '4px' }}>
+                    <span style={{ color: stateColor, fontWeight: 600 }}>{itemState}</span>
+                    {' • '}
+                    {[session.payment_state || 'paid', `${videoLength} video${videoLength !== 1 ? 's' : ''}`, session.date].filter(Boolean).join(' • ')}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -709,6 +734,8 @@ export default function OnlineSessions() {
                 </div>
                 {/* Metadata */}
                 <div style={{ fontSize: '0.9rem', color: '#6c757d', marginBottom: '12px' }}>
+                  <span style={{ color: stateColor, fontWeight: 600 }}>{itemState}</span>
+                  {' • '}
                   {[session.payment_state || 'paid', `${videoLength} video${videoLength !== 1 ? 's' : ''}`, session.date].filter(Boolean).join(' • ')}
                 </div>
                 {/* Edit/Delete Buttons */}

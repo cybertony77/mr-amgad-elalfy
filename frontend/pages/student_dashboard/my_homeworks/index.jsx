@@ -210,10 +210,12 @@ export default function MyHomeworks() {
     return `week ${String(weekNumber).padStart(2, '0')}`;
   };
 
-  // Get available weeks from homeworks (only weeks that exist in the data)
+  // Get available weeks from homeworks (only weeks that exist in the data and are Activated)
   const getAvailableWeeks = () => {
     const weekSet = new Set();
     homeworks.forEach(homework => {
+      const effectiveState = homework.state || homework.account_state || 'Activated';
+      if (effectiveState === 'Deactivated') return;
       if (homework.week !== undefined && homework.week !== null) {
         weekSet.add(weekNumberToString(homework.week));
       }
@@ -229,6 +231,11 @@ export default function MyHomeworks() {
 
   // Filter homeworks based on search and filters
   const filteredHomeworks = homeworks.filter(homework => {
+    // Hide deactivated homeworks
+    const effectiveState = homework.state || homework.account_state || 'Activated';
+    if (effectiveState === 'Deactivated') {
+      return false;
+    }
     // Search filter (by lesson name - case-insensitive)
     if (searchTerm.trim()) {
       const lessonName = homework.lesson_name || '';
@@ -290,6 +297,24 @@ export default function MyHomeworks() {
   });
 
   const chartData = performanceData?.chartData || [];
+
+  // Only show chart lessons that have at least one Activated homework
+  const activeLessons = new Set(
+    homeworks
+      .filter(hw => (hw.state || hw.account_state || 'Activated') === 'Activated' && hw.lesson)
+      .map(hw => hw.lesson)
+  );
+
+  const filteredChartData = Array.isArray(chartData)
+    ? chartData.filter(item => {
+        const label = (item.week || '').toString().toLowerCase();
+        if (!label) return false;
+        if (activeLessons.size === 0) return true;
+        return Array.from(activeLessons).some(lesson =>
+          label.includes(String(lesson).toLowerCase())
+        );
+      })
+    : [];
 
   // Refetch chart data when returning to this page
   useEffect(() => {

@@ -8,6 +8,7 @@ import Image from 'next/image';
 import GradeSelect from '../../../../components/GradeSelect';
 import AttendanceWeekSelect from '../../../../components/AttendanceWeekSelect';
 import TimerSelect from '../../../../components/TimerSelect';
+import AccountStateSelect from '../../../../components/AccountStateSelect';
 import { TextInput, ActionIcon, useMantineTheme } from '@mantine/core';
 import { IconSearch, IconArrowRight } from '@tabler/icons-react';
 import QuizAnalyticsChart from '../../../../components/QuizAnalyticsChart';
@@ -61,6 +62,7 @@ export default function Quizzes() {
   const [filterGrade, setFilterGrade] = useState('');
   const [filterWeek, setFilterWeek] = useState('');
   const [filterTimer, setFilterTimer] = useState('');
+  const [filterState, setFilterState] = useState('');
   const [filterGradeDropdownOpen, setFilterGradeDropdownOpen] = useState(false);
   const [filterWeekDropdownOpen, setFilterWeekDropdownOpen] = useState(false);
   const [filterTimerDropdownOpen, setFilterTimerDropdownOpen] = useState(false);
@@ -123,6 +125,14 @@ export default function Quizzes() {
         if (quiz.timer && quiz.timer !== 0 && quiz.timer !== null) {
           return false;
         }
+      }
+    }
+
+    // State filter
+    if (filterState) {
+      const effectiveState = quiz.state || quiz.account_state || 'Activated';
+      if (effectiveState !== filterState) {
+        return false;
       }
     }
 
@@ -373,6 +383,18 @@ export default function Quizzes() {
                 onClose={() => setFilterTimerDropdownOpen(false)}
               />
             </div>
+            <div className="filter-group" style={{ flex: 1, minWidth: 180 }}>
+              <label className="filter-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#495057', fontSize: '0.95rem' }}>
+                Filter by Quiz State
+              </label>
+              <AccountStateSelect
+                label="Quiz State"
+                value={filterState || null}
+                onChange={(value) => setFilterState(value || '')}
+                placeholder="Select Quiz State"
+                style={{ marginBottom: 0, hideLabel: true }}
+              />
+            </div>
           </div>
         </div>
 
@@ -415,7 +437,11 @@ export default function Quizzes() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {filteredQuizzes.map((quiz) => (
+              {filteredQuizzes.map((quiz) => {
+                const itemState = quiz.state || quiz.account_state || 'Activated';
+                const stateColor = itemState === 'Activated' ? '#28a745' : '#dc3545';
+
+                return (
                 <div
                   key={quiz._id}
                   className="quiz-item"
@@ -453,6 +479,8 @@ export default function Quizzes() {
                       maxWidth: '350px'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, color: stateColor }}>{itemState}</span>
+                        <span>•</span>
                         <span>{quiz.questions?.length || 0} Question{quiz.questions?.length !== 1 ? 's' : ''}</span>
                         <span>•</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

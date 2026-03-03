@@ -34,6 +34,35 @@ export default function PreviewStudentQuizzes() {
     enabled: !!searchId && !!student,
   });
 
+  // Fetch all quizzes to check state for filtering
+  const { data: allQuizzesData } = useQuery({
+    queryKey: ['all-quizzes'],
+    queryFn: async () => {
+      const response = await apiClient.get('/api/quizzes');
+      return response.data;
+    },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+  });
+
+  const allQuizzes = allQuizzesData?.quizzes || [];
+
+  // Get active weeks from Activated quizzes
+  const activeWeeks = useMemo(() => {
+    const weekSet = new Set();
+    allQuizzes.forEach(quiz => {
+      const itemState = quiz.state || quiz.account_state || 'Activated';
+      if (itemState === 'Activated') {
+        if (quiz.week !== undefined && quiz.week !== null) {
+          weekSet.add(quiz.week.toString());
+        }
+      }
+    });
+    return weekSet;
+  }, [allQuizzes]);
+
   // Fetch quiz performance chart data using API endpoint
   const { data: performanceData, isLoading: isChartLoading } = useQuery({
     queryKey: ['quiz-performance', searchId],
@@ -55,7 +84,21 @@ export default function PreviewStudentQuizzes() {
     retry: 1,
   });
 
-  const chartData = performanceData?.chartData || [];
+  const rawChartData = performanceData?.chartData || [];
+
+  // Filter chart data to only include Activated weeks
+  const chartData = useMemo(() => {
+    if (!Array.isArray(rawChartData) || rawChartData.length === 0) return [];
+    if (activeWeeks.size === 0) return rawChartData; // If no active weeks, show all
+    
+    return rawChartData.filter(item => {
+      const label = (item.week || item.weekNumber || '').toString().toLowerCase();
+      if (!label) return false;
+      return Array.from(activeWeeks).some(week =>
+        label.includes(String(week).toLowerCase())
+      );
+    });
+  }, [rawChartData, activeWeeks]);
 
   const resetQuizMutation = useMutation({
     mutationFn: async ({ studentId, quizId }) => {
