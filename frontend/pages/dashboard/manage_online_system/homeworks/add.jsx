@@ -398,6 +398,11 @@ export default function AddHomework() {
       newErrors.lesson_name = '❌ Lesson name is required';
     }
 
+    // Validate account state
+    if (!accountState || accountState.trim() === '') {
+      newErrors.accountState = '❌ Account State is required';
+    }
+
     // Validate homework type
     if (formData.homework_type === 'pages_from_book') {
       if (!formData.book_name || formData.book_name.trim() === '') {
@@ -610,7 +615,14 @@ export default function AddHomework() {
                 onChange={setAccountState}
                 label="Homework State"
                 placeholder="Select State"
+                required={true}
+                error={errors.accountState}
               />
+              {errors.accountState && (
+                <div style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '4px' }}>
+                  {errors.accountState}
+                </div>
+              )}
             </div>
 
             {/* Lesson Name */}

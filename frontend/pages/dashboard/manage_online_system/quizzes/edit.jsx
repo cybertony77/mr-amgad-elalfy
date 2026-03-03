@@ -567,6 +567,11 @@ export default function EditQuiz() {
       newErrors.lesson_name = '❌ Lesson name is required';
     }
 
+    // Validate account state
+    if (!accountState || accountState.trim() === '') {
+      newErrors.accountState = '❌ Account State is required';
+    }
+
     // Validate timer if with timer is selected
     if (formData.timer_type === 'with_timer') {
       if (!formData.timer || parseInt(formData.timer) < 1) {
@@ -829,7 +834,14 @@ export default function EditQuiz() {
                 onChange={setAccountState}
                 label="Quiz State"
                 placeholder="Select State"
+                required={true}
+                error={errors.accountState}
               />
+              {errors.accountState && (
+                <div style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '4px' }}>
+                  {errors.accountState}
+                </div>
+              )}
             </div>
 
             {/* Lesson Name */}

@@ -7,7 +7,8 @@ const AccountStateSelect = ({
   required = false,
   disabled = false,
   style = {},
-  label = "Account State"
+  label = "Account State",
+  error = null
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -56,7 +57,7 @@ const AccountStateSelect = ({
           onBlur={() => setTimeout(() => setIsOpen(false), 200)}
           style={{
             padding: '14px 16px',
-            border: isOpen ? '2px solid #1FA8DC' : '2px solid #e9ecef',
+            border: error ? '2px solid #dc3545' : (isOpen ? '2px solid #1FA8DC' : '2px solid #e9ecef'),
             borderRadius: '10px',
             backgroundColor: '#ffffff',
             cursor: disabled ? 'not-allowed' : 'pointer',
