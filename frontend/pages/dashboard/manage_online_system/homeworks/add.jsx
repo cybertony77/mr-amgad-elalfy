@@ -35,8 +35,8 @@ export default function AddHomework() {
     questions: [{
       question_text: '',
       question_picture: null,
-      answers: ['A', 'B'],
-      answer_texts: ['', ''], // Text for each answer option
+      answers: ['A', 'B', 'C', 'D'],
+      answer_texts: ['', '', '', ''], // Text for each answer option
       correct_answer: '',
       question_explanation: '' // Explanation for the question (optional)
     }]

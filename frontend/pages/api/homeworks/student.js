@@ -75,7 +75,7 @@ export default async function handler(req, res) {
         
         // Filter homeworks by normalized grade
         console.log('🔍 Filtering homeworks. Student normalized grade:', normalizedStudentGrade);
-        console.log('🔍 Total homeworks before filter:', allHomeworks.length);
+        console.log('🔍 Total homeworks before grade filter:', allHomeworks.length);
         const filteredHomeworks = allHomeworks.filter(hw => {
           if (!hw.grade) {
             console.log('⚠️ Homework has no grade:', hw._id);
@@ -83,10 +83,19 @@ export default async function handler(req, res) {
           }
           const normalizedHwGrade = hw.grade.toLowerCase().replace(/\./g, '').trim();
           const matches = normalizedHwGrade === normalizedStudentGrade;
-          console.log(`🔍 Homework grade: "${hw.grade}" → normalized: "${normalizedHwGrade}" | Matches: ${matches}`);
-          return matches;
+          if (!matches) return false;
+
+          // Apply state/account_state filter: hide Deactivated homeworks
+          const effectiveState = hw.state || hw.account_state || 'Activated';
+          if (effectiveState === 'Deactivated') {
+            console.log('🚫 Skipping deactivated homework:', hw._id);
+            return false;
+          }
+
+          console.log(`🔍 Homework grade: "${hw.grade}" → normalized: "${normalizedHwGrade}" | Matches: ${matches} | state: ${effectiveState}`);
+          return true;
         });
-        console.log('✅ Filtered homeworks count:', filteredHomeworks.length);
+        console.log('✅ Filtered homeworks count (grade + state):', filteredHomeworks.length);
         
         // Sort by week number (ascending), with null weeks at the end
         const sortedHomeworks = filteredHomeworks.sort((a, b) => {
@@ -107,6 +116,7 @@ export default async function handler(req, res) {
         
         // Remove correct_answer from questions for students
         const sanitizedHomeworks = sortedHomeworks.map(hw => {
+          const effectiveState = hw.state || hw.account_state || 'Activated';
           const sanitized = {
             _id: hw._id,
             grade: hw.grade || null,
@@ -117,7 +127,8 @@ export default async function handler(req, res) {
             deadline_date: hw.deadline_date || null,
             timer: hw.timer || null,
             shuffle_questions_and_answers: hw.shuffle_questions_and_answers || false,
-            show_details_after_submitting: hw.show_details_after_submitting || false
+            show_details_after_submitting: hw.show_details_after_submitting || false,
+            state: effectiveState
           };
 
           // Add pages_from_book fields if applicable

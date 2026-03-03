@@ -149,11 +149,14 @@ export default async function handler(req, res) {
     const normalizedStudentGrade = studentGrade.toLowerCase().replace(/\./g, '').trim();
     const allHomeworks = await db.collection('homeworks').find({}).toArray();
     
-    // Filter homeworks by normalized grade
+    // Filter homeworks by normalized grade and state (exclude Deactivated)
     const filteredHomeworks = allHomeworks.filter(hw => {
       if (!hw.grade || !hw.week) return false; // Only include homeworks with grade and week
       const normalizedHwGrade = hw.grade.toLowerCase().replace(/\./g, '').trim();
-      return normalizedHwGrade === normalizedStudentGrade;
+      if (normalizedHwGrade !== normalizedStudentGrade) return false;
+
+      const effectiveState = hw.state || hw.account_state || 'Activated';
+      return effectiveState !== 'Deactivated';
     });
 
     // Group all homeworks by week - show result directly from DB (no aggregation)
@@ -195,10 +198,12 @@ export default async function handler(req, res) {
       }
     });
 
-    // ALSO add weeks data that don't have corresponding homeworks in the database
-    // This ensures all weeks with hwDegree are shown in the chart
+    // ALSO add weeks data that don't have corresponding homeworks in the database,
+    // but only for weeks that have at least one non-deactivated homework
+    const activeWeeks = new Set(filteredHomeworks.map(hw => hw.week));
+
     weeks.forEach(weekData => {
-      if (weekData.week && weekData.hwDegree) {
+      if (weekData.week && weekData.hwDegree && activeWeeks.has(weekData.week)) {
         // Check if this week already has data from filteredHomeworks
         if (!weekDataMap[weekData.week]) {
           // Parse hwDegree format like "50 / 120"
