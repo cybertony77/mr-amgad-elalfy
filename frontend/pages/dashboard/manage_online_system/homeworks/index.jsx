@@ -601,7 +601,7 @@ export default function Homeworks() {
                     </button>
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           )}
 

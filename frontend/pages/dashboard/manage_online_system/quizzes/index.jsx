@@ -577,7 +577,7 @@ export default function Quizzes() {
                     </button>
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           )}
 
