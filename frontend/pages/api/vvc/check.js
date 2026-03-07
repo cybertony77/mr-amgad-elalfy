@@ -114,7 +114,8 @@ export default async function handler(req, res) {
         today.setHours(0, 0, 0, 0);
         deadlineDate.setHours(0, 0, 0, 0);
         
-        if (deadlineDate <= today) {
+        // Allow use until the end of the deadline day (deadlineDate < today means expired)
+        if (deadlineDate < today) {
           return res.status(200).json({ 
             success: false,
             error: '❌ Sorry, This code is expired',
@@ -124,29 +125,20 @@ export default async function handler(req, res) {
       }
     } else {
       // Check if code is already used or invalid (for number_of_views)
-      // Error if: viewed === true OR (viewed_by_who != null AND viewed_by_who != user id) OR number_of_views <= 0
-      // Valid if: viewed === false AND (viewed_by_who === null OR viewed_by_who === user id) AND number_of_views > 0
-      if (vvcRecord.viewed === true) {
+      // No views remaining
+      if (vvcRecord.number_of_views === null || vvcRecord.number_of_views <= 0) {
         return res.status(200).json({ 
           success: false,
-          error: '❌ Sorry, this code is already used',
+          error: '❌ Sorry, this code has no views remaining',
           valid: false 
         });
       }
 
-      if (vvcRecord.number_of_views <= 0) {
-        return res.status(200).json({ 
-          success: false,
-          error: '❌ Sorry, this code is already used',
-          valid: false 
-        });
-      }
-
-      // Check if viewed_by_who is not null and not equal to user id
+      // Code is already assigned to a different student
       if (vvcRecord.viewed_by_who !== null && vvcRecord.viewed_by_who !== studentId) {
         return res.status(200).json({ 
           success: false,
-          error: '❌ Sorry, this code is already used',
+          error: '❌ Sorry, this code is already used by another student',
           valid: false 
         });
       }

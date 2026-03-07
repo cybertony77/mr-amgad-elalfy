@@ -208,6 +208,65 @@ export default function HomeworksVideos() {
 
   const sessions = sessionsData?.sessions || [];
 
+  // Restore unlocked sessions from student's homeworks_videos on page load
+  useEffect(() => {
+    const restoreUnlockedSessions = async () => {
+      console.log('[RESTORE VHC] studentData:', studentData);
+      if (!studentData?.homeworks_videos || !Array.isArray(studentData.homeworks_videos)) {
+        console.log('[RESTORE VHC] No homeworks_videos found in studentData');
+        return;
+      }
+
+      console.log('[RESTORE VHC] Starting restore process, found', studentData.homeworks_videos.length, 'homeworks_videos');
+      const newUnlocked = new Map();
+      
+      // Process each homeworks_video entry
+      for (const homeworkVideo of studentData.homeworks_videos) {
+        if (!homeworkVideo.vhc_id || !homeworkVideo.video_id) {
+          console.log('[RESTORE VHC] Skipping entry - missing vhc_id or video_id:', homeworkVideo);
+          continue;
+        }
+
+        try {
+          console.log('[RESTORE VHC] Fetching VHC details for video_id:', homeworkVideo.video_id, 'vhc_id:', homeworkVideo.vhc_id);
+          // Fetch VHC details by ID
+          const response = await apiClient.post('/api/vhc/get-by-id', {
+            vhc_id: homeworkVideo.vhc_id
+          });
+
+          console.log('[RESTORE VHC] VHC response:', response.data);
+          if (response.data.success && response.data.valid) {
+            // Add to unlocked sessions Map
+            const videoId = typeof homeworkVideo.video_id === 'string' 
+              ? homeworkVideo.video_id 
+              : homeworkVideo.video_id.toString();
+            
+            console.log('[RESTORE VHC] Adding to unlocked sessions - videoId:', videoId, 'vhc_id:', response.data.vhc_id);
+            newUnlocked.set(videoId, {
+              vhc_id: response.data.vhc_id,
+              code_settings: response.data.code_settings || 'number_of_views',
+              number_of_views: response.data.number_of_views || null,
+              deadline_date: response.data.deadline_date || null
+            });
+          } else {
+            console.log('[RESTORE VHC] VHC not valid:', response.data);
+          }
+        } catch (err) {
+          console.error('[RESTORE VHC] Failed to restore VHC for video:', homeworkVideo.video_id, err);
+          // Continue with other entries even if one fails
+        }
+      }
+
+      // Update unlocked sessions state
+      console.log('[RESTORE VHC] Restored', newUnlocked.size, 'unlocked sessions');
+      if (newUnlocked.size > 0) {
+        setUnlockedSessions(newUnlocked);
+      }
+    };
+
+    restoreUnlockedSessions();
+  }, [studentData]);
+
   // Helper function to check if student attended a specific week
   const checkWeekAttendance = (weekNumber) => {
     if (!studentData || !studentData.weeks || !weekNumber) return false;
@@ -227,6 +286,8 @@ export default function HomeworksVideos() {
       // Check if session is in unlockedSessions
       const sessionId = session._id?.toString() || session._id;
       const unlockedInfo = unlockedSessions.get(sessionId);
+      
+      console.log('[UNLOCK CHECK VHC] Session ID:', sessionId, 'Unlocked info:', unlockedInfo, 'All unlocked keys:', Array.from(unlockedSessions.keys()));
       
       if (!unlockedInfo) {
         return false; // Not unlocked yet

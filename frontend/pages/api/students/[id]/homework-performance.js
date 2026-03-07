@@ -198,12 +198,10 @@ export default async function handler(req, res) {
       }
     });
 
-    // ALSO add weeks data that don't have corresponding homeworks in the database,
-    // but only for weeks that have at least one non-deactivated homework
-    const activeWeeks = new Set(filteredHomeworks.map(hw => hw.week));
-
+    // ALSO add weeks data that don't have corresponding homeworks in the database
+    // This ensures all weeks with hwDegree are shown in the chart, even if there's no homework in the database
     weeks.forEach(weekData => {
-      if (weekData.week && weekData.hwDegree && activeWeeks.has(weekData.week)) {
+      if (weekData.week && weekData.hwDegree) {
         // Check if this week already has data from filteredHomeworks
         if (!weekDataMap[weekData.week]) {
           // Parse hwDegree format like "50 / 120"

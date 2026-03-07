@@ -561,37 +561,26 @@ export default function StudentDashboard() {
       return null;
     }
     
-    // Check if there's a session today or later this week
-    for (const timing of validTimings) {
+    // Find the next session
+    validTimings.forEach((timing) => {
       const daysUntilSession = (timing.dayIndex - currentDayIndex + 7) % 7;
       const sessionTime = timing.timeMinutes;
-      
-      // If it's today and time hasn't passed, or it's a future day
-      if (daysUntilSession === 0 && sessionTime >= currentTime) {
-        // Session is today
-        nextSessionDate = new Date(now);
-        nextSessionDate.setHours(Math.floor(sessionTime / 60), sessionTime % 60, 0, 0);
-        nextTiming = timing;
-        break;
-      } else if (daysUntilSession > 0) {
-        // Session is in the future
-        nextSessionDate = new Date(now);
-        nextSessionDate.setDate(now.getDate() + daysUntilSession);
-        nextSessionDate.setHours(Math.floor(sessionTime / 60), sessionTime % 60, 0, 0);
-        nextTiming = timing;
-        break;
+
+      let candidateDate = new Date(now);
+
+      candidateDate.setDate(now.getDate() + daysUntilSession);
+      candidateDate.setHours(Math.floor(sessionTime / 60), sessionTime % 60, 0, 0);
+
+      // if session today but already passed → move to next week
+      if (daysUntilSession === 0 && sessionTime < currentTime) {
+        candidateDate.setDate(candidateDate.getDate() + 7);
       }
-    }
-    
-    // If no session found this week, get the first one next week
-    if (!nextSessionDate) {
-      const firstTiming = validTimings[0];
-      const daysUntilSession = (firstTiming.dayIndex - currentDayIndex + 7) % 7 || 7;
-      nextSessionDate = new Date(now);
-      nextSessionDate.setDate(now.getDate() + daysUntilSession);
-      nextSessionDate.setHours(Math.floor(firstTiming.timeMinutes / 60), firstTiming.timeMinutes % 60, 0, 0);
-      nextTiming = firstTiming;
-    }
+
+      if (!nextSessionDate || candidateDate < nextSessionDate) {
+        nextSessionDate = candidateDate;
+        nextTiming = timing;
+      }
+    });
     
     if (!nextSessionDate || !nextTiming) {
       return null;

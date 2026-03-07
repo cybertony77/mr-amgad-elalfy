@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../lib/axios';
 import { useProfile } from '../../lib/api/auth';
 import { useSystemConfig } from '../../lib/api/system';
+import { useStudent } from '../../lib/api/students';
 import NeedHelp from '../../components/NeedHelp';
 import { TextInput, ActionIcon, useMantineTheme } from '@mantine/core';
 import { IconSearch, IconArrowRight } from '@tabler/icons-react';
@@ -164,6 +165,10 @@ export default function OnlineSessions() {
   const router = useRouter();
   const { data: profile } = useProfile();
   
+  // Fetch student data to get available lessons
+  const studentId = profile?.id ? profile.id.toString() : null;
+  const { data: studentData } = useStudent(studentId, { enabled: !!studentId });
+  
   // Redirect if feature is disabled
   useEffect(() => {
     if (systemConfig && !isOnlineVideosEnabled) {
@@ -301,6 +306,64 @@ export default function OnlineSessions() {
     }
   };
 
+  // Restore unlocked sessions from student's online_sessions on page load
+  useEffect(() => {
+    const restoreUnlockedSessions = async () => {
+      console.log('[RESTORE] studentData:', studentData);
+      if (!studentData?.online_sessions || !Array.isArray(studentData.online_sessions)) {
+        console.log('[RESTORE] No online_sessions found in studentData');
+        return;
+      }
+
+      console.log('[RESTORE] Starting restore process, found', studentData.online_sessions.length, 'online_sessions');
+      const newUnlocked = new Map();
+      
+      // Process each online_session entry
+      for (const onlineSession of studentData.online_sessions) {
+        if (!onlineSession.vvc_id || !onlineSession.video_id) {
+          console.log('[RESTORE] Skipping entry - missing vvc_id or video_id:', onlineSession);
+          continue;
+        }
+
+        try {
+          console.log('[RESTORE] Fetching VVC details for video_id:', onlineSession.video_id, 'vvc_id:', onlineSession.vvc_id);
+          // Fetch VVC details by ID
+          const response = await apiClient.post('/api/vvc/get-by-id', {
+            vvc_id: onlineSession.vvc_id
+          });
+
+          console.log('[RESTORE] VVC response:', response.data);
+          if (response.data.success && response.data.valid) {
+            // Add to unlocked sessions Map
+            const videoId = typeof onlineSession.video_id === 'string' 
+              ? onlineSession.video_id 
+              : onlineSession.video_id.toString();
+            
+            console.log('[RESTORE] Adding to unlocked sessions - videoId:', videoId, 'vvc_id:', response.data.vvc_id);
+            newUnlocked.set(videoId, {
+              vvc_id: response.data.vvc_id,
+              code_settings: response.data.code_settings || 'number_of_views',
+              number_of_views: response.data.number_of_views || null,
+              deadline_date: response.data.deadline_date || null
+            });
+          } else {
+            console.log('[RESTORE] VVC not valid:', response.data);
+          }
+        } catch (err) {
+          console.error('[RESTORE] Failed to restore VVC for video:', onlineSession.video_id, err);
+          // Continue with other entries even if one fails
+        }
+      }
+
+      // Update unlocked sessions state
+      console.log('[RESTORE] Restored', newUnlocked.size, 'unlocked sessions');
+      if (newUnlocked.size > 0) {
+        setUnlockedSessions(newUnlocked);
+      }
+    };
+
+    restoreUnlockedSessions();
+  }, [studentData]);
 
   // Helper function to check if video is unlocked
   const isVideoUnlocked = (session) => {
@@ -310,6 +373,8 @@ export default function OnlineSessions() {
       // Check if session is in unlockedSessions
       const sessionId = session._id?.toString() || session._id;
       const unlockedInfo = unlockedSessions.get(sessionId);
+      
+      console.log('[UNLOCK CHECK] Session ID:', sessionId, 'Unlocked info:', unlockedInfo, 'All unlocked keys:', Array.from(unlockedSessions.keys()));
       
       if (!unlockedInfo) {
         return false; // Not unlocked yet
@@ -322,7 +387,8 @@ export default function OnlineSessions() {
         today.setHours(0, 0, 0, 0);
         deadlineDate.setHours(0, 0, 0, 0);
         
-        if (deadlineDate <= today) {
+        // Allow use until the end of the deadline day (deadlineDate < today means expired)
+        if (deadlineDate < today) {
           // Expired - remove from unlocked sessions
           const newUnlocked = new Map(unlockedSessions);
           newUnlocked.delete(sessionId);
@@ -465,7 +531,8 @@ export default function OnlineSessions() {
           today.setHours(0, 0, 0, 0);
           deadlineDate.setHours(0, 0, 0, 0);
           
-          if (deadlineDate <= today) {
+          // Allow use until the end of the deadline day (deadlineDate < today means expired)
+          if (deadlineDate < today) {
             // Expired
             setVvcError('❌ Sorry, This code is expired');
             const newUnlocked = new Map(unlockedSessions);

@@ -34,12 +34,20 @@ const MONGO_URI = envConfig.MONGO_URI || process.env.MONGO_URI;
 const DB_NAME = envConfig.DB_NAME || process.env.DB_NAME;
 
 // Format date as DD/MM/YYYY
+// Format date as DD/MM/YYYY at HH:MM AM/PM
 function formatDate(date) {
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
   
-  return `${day}/${month}/${year}`;
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const hoursStr = String(hours).padStart(2, '0');
+  
+  return `${day}/${month}/${year} at ${hoursStr}:${minutes} ${ampm}`;
 }
 
 export default async function handler(req, res) {
@@ -252,6 +260,34 @@ export default async function handler(req, res) {
           { $push: { weeks: newWeek } }
         );
       }
+    }
+
+    // Save to student's homeworks_videos array (similar to online_sessions for VVC)
+    // Ensure homeworks_videos array exists
+    const homeworksVideos = student.homeworks_videos || [];
+    
+    // Check if this session is already in homeworks_videos
+    const existingSessionIndex = homeworksVideos.findIndex(s => s.video_id === session_id);
+    
+    const newSessionEntry = {
+      video_id: session_id,
+      vhc_id: vhcRecord._id.toString(),
+      date: formatDate(new Date())
+    };
+    
+    if (existingSessionIndex !== -1) {
+      // Override existing entry with new VHC
+      homeworksVideos[existingSessionIndex] = newSessionEntry;
+      await db.collection('students').updateOne(
+        { id: studentId },
+        { $set: { homeworks_videos: homeworksVideos } }
+      );
+    } else {
+      // Add new entry to homeworks_videos
+      await db.collection('students').updateOne(
+        { id: studentId },
+        { $push: { homeworks_videos: newSessionEntry } }
+      );
     }
 
     // Get current VHC to return relevant data

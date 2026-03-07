@@ -96,6 +96,8 @@ export default async function handler(req, res) {
         account_state: student.account_state || "Deactivated", // Default to Deactivated if not found
         score: student.score !== null && student.score !== undefined ? student.score : 0,
         weeks: student.weeks || [], // Include the full weeks array
+        online_sessions: student.online_sessions || [], // Include online_sessions for VVC restore
+        homeworks_videos: student.homeworks_videos || [], // Include homeworks_videos for VHC restore
         online_homeworks: student.online_homeworks || [], // Include online_homeworks for degree lookup
         online_quizzes: student.online_quizzes || [] // Include online_quizzes for degree lookup
       });
