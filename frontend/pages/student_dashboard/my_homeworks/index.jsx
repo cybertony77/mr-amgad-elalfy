@@ -500,6 +500,13 @@ export default function MyHomeworks() {
   // Track which homeworks have already had deadline penalties applied (to prevent duplicate scoring)
   const deadlinePenaltiesAppliedRef = useRef(new Set());
   
+  /**
+   * DEADLINE DB/SCORE LOGIC DISABLED:
+   * The effect below was updating weeks.hwDone in the database and recalculating
+   * scores when deadlines passed. It is now commented out so deadlines only
+   * affect the UI, not DB or scoring.
+   */
+  /*
   // Check deadlines and update student weeks if needed
   useEffect(() => {
     if (!profile?.id || homeworks.length === 0) return;
@@ -668,6 +675,7 @@ export default function MyHomeworks() {
 
     checkDeadlines();
   }, [profile?.id, homeworks, completedHomeworks, weeksLoaded]); // Removed studentWeeks from deps to prevent re-runs
+  */
 
   if (isLoading) {
     return (
